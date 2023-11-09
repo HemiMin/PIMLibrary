@@ -51,7 +51,8 @@ void PimCrfBinGen::create_pim_cmd(PimOpType op_type, int lc)
         std::vector<PimCommand> tmp_cmds{
             PimCommand(PimCmdType::FILL, PimOpdType::GRF_A, PimOpdType::EVEN_BANK),
             PimCommand(PimCmdType::ADD, PimOpdType::GRF_A, PimOpdType::GRF_A, PimOpdType::EVEN_BANK, 1),
-            PimCommand(PimCmdType::NOP, 23), PimCommand(PimCmdType::FILL, PimOpdType::GRF_B, PimOpdType::ODD_BANK),
+            PimCommand(PimCmdType::NOP, 23), 
+            PimCommand(PimCmdType::FILL, PimOpdType::GRF_B, PimOpdType::ODD_BANK),
             PimCommand(PimCmdType::ADD, PimOpdType::GRF_B, PimOpdType::GRF_B, PimOpdType::ODD_BANK, 1),
             PimCommand(PimCmdType::NOP, 23) /*,
             PimCommand(PimCmdType::NOP, 0)*/};
@@ -187,10 +188,27 @@ int PimCrfBinGen::preprocess_srf(PimBo* beta, PimBo* gamma, PimBo* mean, PimBo* 
     return 0;
 }
 
+/* get #iteration of CMDs in crf by JUMP at the end of CMDs in crf
+ * ex) lc is 2,  
+ *       ADD()
+ *       JUMP(2) 
+ *     ADD is executed three times including execution at first time
+ */
 int PimCrfBinGen::get_loop_counter(PimOpType op_type, int input_size)
 {
     int lc = 0;
+    /* num_transaction = #OPs to get input
+     * 16: #OPs to be executed by running PIM FU once
+     *     PIM FU is vector processor that can execute 16 OPs at once
+     * (input_size / 16): #(execution of PIM FU)
+     * sizeof(uint16_t): hardcoded data type size
+     *                   size of FP16 is 2
+     */
     int num_transaction = (input_size / 16) / sizeof(uint16_t);
+    /* num_parallelism = #parallel execution of PIM FUs
+     * pim_blocks(8): #PIM units in one channel
+     * num_grf(8): all grfs are executed in parallel by pipelining
+     */
     int num_parallelism = pbi_->num_pim_blocks * pbi_->num_pim_chan * pbi_->num_pim_rank * pbi_->num_grf;
     int num_tile = num_transaction / num_parallelism;
 
@@ -207,12 +225,12 @@ int PimCrfBinGen::get_loop_counter(PimOpType op_type, int input_size)
 void* PimCrfBinGen::make_crf_bin(PimOpType op_type, int data_size)
 {
     DLOG(INFO) << "[START] " << __FUNCTION__ << " called";
-    uint8_t* h_crf = new uint8_t[max_crf_size_];
+    uint8_t* h_crf = new uint8_t[max_crf_size_]; // max_crf_size_ = 128, (in constructor)
     uint8_t* d_crf;
     int crf_size;
     pim_manager_->alloc_memory((void**)&d_crf, max_crf_size_, MEM_TYPE_DEVICE);
 
-    int lc = get_loop_counter(op_type, data_size);
+    int lc = get_loop_counter(op_type, data_size); // JUMP loop counter
     gen_binary_with_loop(op_type, lc, h_crf, &crf_size);
 
     pim_manager_->copy_memory((void*)d_crf, (void*)h_crf, max_crf_size_, HOST_TO_DEVICE);

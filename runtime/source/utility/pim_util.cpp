@@ -181,12 +181,13 @@ void align_gemm_shape(PimGemmDesc* pim_gemm_desc)
 
     if (pim_gemm_desc->gemm_order == W_X_I) {
         aligned_in_size = PIM_GEMV_IN_ALIGN * ceil((float)in_h / PIM_GEMV_IN_ALIGN);
+                          // 256
         out_align = n * c * out_h;
         if (out_align % PIM_GEMV_OUT_ALIGN == 0)
             aligned_out_size = out_h;
         else
             aligned_out_size = PIM_GEMV_OUT_ALIGN * ceil((float)out_h / PIM_GEMV_OUT_ALIGN);
-
+                               // 4096
         pim_gemm_desc->in_bshape.h = aligned_in_size;
         pim_gemm_desc->wei_bshape.w = aligned_in_size;
         pim_gemm_desc->wei_bshape.h = aligned_out_size;

@@ -50,6 +50,13 @@ __global__ void pim_chwise_gemm_bias_relu_fp16(
     int even_row, odd_row, col, loc;
     int ch = hipBlockIdx_x;
     int w_idx = hipThreadIdx_x % 2;
+
+    // blockIdx = channelIdx
+    // threadIdx = bankIdx
+    // gidx = pim idx that located between even and odd bank
+    // ex) pim for bank0~bank1 = 0
+    //     pim for bank2~bank3 = 1
+    //     ....
     int gidx = hipThreadIdx_x >> 1;
     uint64_t offset = w_idx << 4;
     uint64_t addr;
@@ -60,6 +67,8 @@ __global__ void pim_chwise_gemm_bias_relu_fp16(
 
 #if PARK_IN
     if (hipThreadIdx_x < 32) {
+      // gidx = 0~15
+      // all banks park_in
         park_in(pim_ctr, gidx, num_ba, offset);
     }
 #endif
@@ -78,11 +87,13 @@ __global__ void pim_chwise_gemm_bias_relu_fp16(
 #endif
 
 #if COMPUTE_GEMM
+    // gidx here, is grfIdx(0~7)
     if (hipThreadIdx_x < 16) {
         for (int i = 0; i < iter_cnt; i++) {
             /* change HAB mode to HAB_PIM mode */
             for (int in_idx = 0; in_idx < inout_h; in_idx++) {
                 addr = addr_gen(ch, 0, 0, 0, 0x3fff, 0x0);
+
                 W_CMD_R(&pim_ctr[addr + offset], gemv_hab_to_hab_pim + offset);
                 R_CMD(&pim_ctr[addr + offset]);
                 B_CMD(1);
@@ -92,7 +103,11 @@ __global__ void pim_chwise_gemm_bias_relu_fp16(
                 for (int i_idx = 0; i_idx < n_in_tile; i_idx += 2) {
                     /* write grf_A from WRIO */
                     uint64_t i_addr = (i_offset + ((i_idx << grf_shift) + gidx)) << trans_shift;
+                    // thread0/1, input->GRF_A[0], ...
+                    // thread2/3, input->GRF_A[1], ...
+
                     addr = addr_gen(ch, 0, 0, 0, 0x3fff, 0x8 + gidx);
+                    // write input to GRF_A 
                     W_CMD_R(&pim_ctr[addr + offset], &input[i_addr + offset]);
                     R_CMD(&pim_ctr[addr + offset]);
                     B_CMD(1);
@@ -100,6 +115,8 @@ __global__ void pim_chwise_gemm_bias_relu_fp16(
                     even_row = ((i_idx >> 1) + r_offset) << 1;
                     odd_row = even_row + 1;
 
+                    // read weight in EVEN_BANK and
+                    // MAC GRF_A(input) & EVEN_BANK to GRF_B
                     addr = addr_gen(ch, 0, 0, 0, even_row, gidx);
                     R_CMD(&weight[addr + offset]);
 

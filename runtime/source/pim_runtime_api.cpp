@@ -146,6 +146,16 @@ PimBo* PimCreateBo(int n, int c, int h, int w, PimPrecision precision, PimMemTyp
     pim_bo->data_layout_type = PimDataLayoutType::RAW;
     pim_bo->transposed = transposed;
 
+    /* if user_ptr != nullptr
+     *  not allocate memory,
+     *  pim_bo->data = user_ptr, use_user_ptr = true (in PimRuntime)
+     * else
+     *  pim_bo->data = allocate memory (in HipMemoryManager)
+     *  use_user_ptr = false
+     * 
+     * if user_user_ptr = true
+     *  when free PimBo later, not free pim_bo->data
+     */
     ret = pim_runtime->alloc_memory(pim_bo, user_ptr);
     if (ret != 0) {
         DLOG(ERROR) << "Fail to alloc memory";
@@ -239,6 +249,7 @@ PimGemmDesc* PimCreateGemmDesc(int n, int c, int in_h, int in_w, int out_h, int 
 
     pim_gemm_desc->precision = precision;
     pim_gemm_desc->gemm_order = gemm_order;
+    // set raw data shape
     pim_gemm_desc->in_bshape_r = {(uint32_t)n, (uint32_t)c, (uint32_t)in_h, (uint32_t)in_w};
     if (gemm_order == W_X_I)
         pim_gemm_desc->wei_bshape_r = {(uint32_t)n, (uint32_t)c, (uint32_t)out_h, (uint32_t)in_h};
@@ -247,6 +258,7 @@ PimGemmDesc* PimCreateGemmDesc(int n, int c, int in_h, int in_w, int out_h, int 
     pim_gemm_desc->bias_bshape_r = {(uint32_t)n, (uint32_t)c, (uint32_t)out_h, (uint32_t)out_w};
     pim_gemm_desc->out_bshape_r = {(uint32_t)n, (uint32_t)c, (uint32_t)out_h, (uint32_t)out_w};
 
+    // set aligned data shape
     align_gemm_shape(pim_gemm_desc);
 
     return pim_gemm_desc;

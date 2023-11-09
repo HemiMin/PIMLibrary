@@ -21,3 +21,8 @@ TEST_F(PimReluTestFixture, hip_pim_relu_1x1024)
     SetUp(RT_TYPE_HIP);
     EXPECT_TRUE(ExecuteTest(1 * 1024) == 0);
 }
+TEST_F(PimReluTestFixture, hip_pim_relu_512x1024)
+{
+    SetUp(RT_TYPE_HIP);
+    EXPECT_TRUE(ExecuteTest(512 * 1024) == 0);
+}

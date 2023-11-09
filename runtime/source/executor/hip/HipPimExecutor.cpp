@@ -147,6 +147,7 @@ int HipPimExecutor::execute_add(PimBo* output, PimBo* operand0, PimBo* operand1,
 
     int output_size = output->size;
 
+    // find already generated CMDs in PimCrfBinGen.crf_lut_({op_type, data_size})
     uint8_t* crf_bin = pim_crf_generator_->find_crf(OP_ELT_ADD, output_size);
     int crf_size = 32;
     if (crf_bin == nullptr) {
@@ -237,8 +238,10 @@ int HipPimExecutor::execute_gemm(PimBo* output, PimBo* input, PimBo* weight, Pim
                                  void* stream, bool block)
 {
     int ret = 0;
+    // execute on GPU
     if (kernel_type_ == CUSTOM_GPU) {
         ret = this->execute_gemv(output, input, weight, bias, act_func, stream, block);
+    // execute on PIM
     } else if (kernel_type_ == PIM) {
         PimBo* pim_wei;
         if (weight->data_layout_type == PimDataLayoutType::RAW) {
@@ -250,6 +253,7 @@ int HipPimExecutor::execute_gemm(PimBo* output, PimBo* input, PimBo* weight, Pim
         if (gemm_order_ == W_X_I) set_pimbo_t(input, pim_wei, bias, output);
         ret = this->execute_hip_gemm(output, input, pim_wei, bias, act_func, stream, block);
         if (gemm_order_ == W_X_I) set_pimbo_t(input, pim_wei, bias, output);
+    // if data layout is applicable to pim, execute on PIM, or execute on GPU
     } else {
         if (is_pim_applicable(weight, gemm_order_)) {
             PimBo* pim_wei;

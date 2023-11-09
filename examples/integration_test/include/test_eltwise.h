@@ -64,6 +64,7 @@ class PimEltwiseTest : public Testing
 
     virtual void run(bool block = true, unsigned niter = 1) override
     {
+      // niter: just to get avg results
         for (unsigned i = 0; i < niter; ++i) {
             if (op_ == "add")
                 PimExecuteAdd(device_output_, device_opr1_, device_opr2_, nullptr, true);
