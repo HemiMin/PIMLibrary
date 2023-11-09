@@ -73,7 +73,9 @@ uint64_t HipBlockAllocator::allocate_pim_block(size_t bsize, int host_id) const
 {
     uint64_t ret = 0;
     DLOG(INFO) << "PIM's Host Device ID : " << host_id;
-    if (pim_alloc_done[host_id] == true) return 0;
+    if (pim_alloc_done[host_id] == true) {
+      return 0;
+    }
 
 #ifdef EMULATOR
     if (hipMalloc((void**)&ret, bsize) != hipSuccess) {
@@ -87,7 +89,7 @@ uint64_t HipBlockAllocator::allocate_pim_block(size_t bsize, int host_id) const
         pim_alloc_done[host_id] = true;
         g_pim_base_addr[host_id] = ret;
 #ifndef EMULATOR
-        hipHostRegister((void*)g_pim_base_addr[host_id], bsize, hipRegisterExternalSvm);
+        //hipHostRegister((void*)g_pim_base_addr[host_id], bsize, hipRegisterExternalSvm);
 #endif
     } else {
         std::cout << "fmm_map_pim failed! " << ret << std::endl;
