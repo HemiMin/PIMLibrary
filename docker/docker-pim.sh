@@ -6,7 +6,7 @@ WORKSPACE=$HOME/$2
 docker ps -a | grep ${container_name} > /dev/null 2>&1
 result=$?
 
-if [ ! $result -eq 0 ]; then
+#if [ ! $result -eq 0 ]; then
     echo "No Container found, Create new containter ${container_name}"
 
     mkdir -p $WORKSPACE
@@ -17,8 +17,7 @@ if [ ! $result -eq 0 ]; then
                  --security-opt seccomp:unconfined \
                  --cap-add=ALL --privileged \
                  -e DISPLAY=$DISPLAY \
-                 -p 8080:8080 \
-                 --dns 10.41.128.98 \
+                 -p 32768:80 \
                  -v /dev:/dev \
                  -v /lib/modules:/lib/modules \
                  -v $HOME/.ssh:/home/user/.ssh \
@@ -28,7 +27,9 @@ if [ ! $result -eq 0 ]; then
 		 -v $WORKSPACE:/home/user/pim-workspace \
 		 --name=${container_name} \
                  $image_name /bin/bash
-else
-    docker start  ${container_name} && docker attach ${container_name}
-fi
+#                 --dns 10.41.128.98 \
+#                 --dns 8.8.8.8 \
+#else
+#    docker start  ${container_name} && docker attach ${container_name}
+#fi
 
