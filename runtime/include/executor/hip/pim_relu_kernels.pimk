@@ -55,6 +55,7 @@ __global__ void relu_pim(volatile uint8_t* __restrict__ pim_data, volatile uint8
     park_in(pim_ctr, gidx, num_ba, offset);
 #endif
 
+        //printf("th:%d, offset:%d\n", hipThreadIdx_x, offset);
     if (hipThreadIdx_x < 2) {
 #if CHANGE_SB_HAB
         change_sb_hab(pim_ctr, offset);
@@ -78,6 +79,7 @@ __global__ void relu_pim(volatile uint8_t* __restrict__ pim_data, volatile uint8
             addr = addr_gen(hipBlockIdx_x, 0, 0, 0, row, col);
             addr_even = addr + offset;
             addr_odd = addr_even + 0x2000;
+            printf("tile_idx: %d, ch: %d, row: %d, col: %d, addr:%d\n", tile_idx, hipBlockIdx_x, row, col, addr/32);
 
             R_CMD(&pim_data[addr_even]);
             B_CMD(1);

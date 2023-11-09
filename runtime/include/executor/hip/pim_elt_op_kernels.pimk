@@ -38,9 +38,13 @@ __global__ void elt_op_pim(volatile uint8_t* __restrict__ operand0, volatile uin
 #endif
     int num_col = 32;
     int num_grf = 8;
-    int num_ba = 4;
+    int num_ba = 4; // #bank_group
 
-    int gidx = hipThreadIdx_x / 2;
+    int gidx = hipThreadIdx_x / 2; // GRF index(0~7)
+
+    // data index offset
+    // even threadIdx accesses data[0:15],
+    // odd threadIdx accesses data[16:31],
     uint64_t offset = (hipThreadIdx_x % 2) * 0x10;
     uint64_t addr, addr_even, addr_odd;
 
@@ -72,6 +76,7 @@ __global__ void elt_op_pim(volatile uint8_t* __restrict__ operand0, volatile uin
             unsigned int col = loc % num_col;
 
             addr = addr_gen(hipBlockIdx_x, 0, 0, 0, row, col);
+            printf("tile_idx: %d, ch: %d, row: %d, col: %d, addr:%d\n", tile_idx, hipBlockIdx_x, row, col, addr/32);
 
             addr_even = addr + offset;
             addr_odd = addr_even + 0x2000;
