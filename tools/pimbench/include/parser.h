@@ -9,7 +9,7 @@
 #include <vector>
 #include "utility/pim_log.h"
 
-using namespace boost::program_options;
+//using namespace boost::program_options;
 using namespace std;
 
 class Parser
@@ -19,7 +19,7 @@ class Parser
     int print_help();
     string get_order() { return order; };
     int get_num_iter() { return num_iter; };
-    variables_map parse_args(int argc, char* argv[]);
+    boost::program_options::variables_map parse_args(int argc, char* argv[]);
     int get_has_bias() { return has_bias; };
     int get_num_batch() { return num_batch; };
     int get_device_id() { return device_id; };
@@ -37,7 +37,7 @@ class Parser
    private:
     bool check_validity();
 
-    options_description desc{"PimBench"};
+    boost::program_options::options_description desc{"PimBench"};
     string order = "";
     string operation = "";
     string platform = "hip";

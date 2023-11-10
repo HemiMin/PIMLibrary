@@ -1,16 +1,17 @@
 #include <boost/program_options.hpp>
 #include "elt_perf.h"
 #include "gemm_perf.h"
+#include "gcn_perf.h"
 #include "parser.h"
 
-using namespace boost::program_options;
+//using namespace boost::program_options;
 
 int main(int argc, char* argv[])
 {
     PerformanceAnalyser* analyser = NULL;
     int ret = 1;
     Parser* parser = new Parser();
-    variables_map vm = parser->parse_args(argc, argv);
+    boost::program_options::variables_map vm = parser->parse_args(argc, argv);
 
     if (vm.count("help")) 
     {
@@ -25,6 +26,8 @@ int main(int argc, char* argv[])
             analyser = new PimGemmTestFixture();
         } else if (op == "relu") {
             analyser = new PimReluTestFixture();
+        } else if (op == "gcn") {
+            analyser = new PimGCNTestFixture();
         } else {
             DLOG(ERROR) << "Pim doesnt support provided operation\n";
             parser->print_help();
