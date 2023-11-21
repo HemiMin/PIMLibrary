@@ -1,9 +1,11 @@
 #ifndef CUDA_VARIABLE_CUH
 #define CUDA_VARIABLE_CUH
 
+#include "half.hpp"
 #include "hip_kernel.h"
 #include "sparse.h"
 
+using half_float::half;
 struct CUDAVariable {
 public:
     float *data, *grad;

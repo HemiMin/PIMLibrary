@@ -55,6 +55,8 @@ class PerformanceAnalyser
 };
 
 int compare_data(char* data_A, char* data_b, size_t size);
+void set_float_data(float* buffer, half_float::half* value, size_t size);
+void set_half_data(half_float::half* buffer, float* value, size_t size);
 void set_half_data(half_float::half* buffer, half_float::half value, size_t size);
 void set_rand_half_data(half_float::half* buffer, half_float::half variation, size_t size);
 int compare_half_Ulps_and_absoulte(half_float::half data_a, half_float::half data_b, int allow_bit_cnt,

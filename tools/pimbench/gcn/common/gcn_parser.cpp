@@ -8,6 +8,7 @@
 #include <cmath>
 #include <vector>
 #include "gcn_parser.h"
+#include "common_perf.h"
 
 using namespace std;
 GCNParser::GCNParser(GCNParams *gcnParams, GCNData *gcnData, std::string graph_name) {

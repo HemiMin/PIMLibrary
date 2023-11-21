@@ -1,4 +1,8 @@
 #include "hip_gcn.h"
+#include "half.hpp"
+#include "pim_data_types.h"
+#include "pim_runtime_api.h"
+#include "common_perf.h"
 #include "timer.h"
 #include <algorithm>
 #include <algorithm>
@@ -6,8 +10,34 @@
 
 using std::max;
 using std::max_element;
+using half_float::half;
 
 CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data) {
+
+    // PimBo vars
+    PimBo *pim_input, *pim_l1_weight, *pim_l1_var1, *pim_l1_var2,
+          *pim_adj_mat, *pim_l2_weight, *pim_l2_var1, *pim_out;
+
+    int input_size = params.num_nodes * params.input_dim;
+    int l1_weight_size = params.input_dim * params.hidden_dim;
+    int l1_var1_size = params.num_nodes * params.hidden_dim;
+    int l1_var2_size = params.num_nodes * params.hidden_dim;
+    int adj_size = params.num_nodes * params.num_nodes;
+    int l2_weight_size = params.hidden_dim * params.output_dim;
+    int l2_var1_size = params.num_nodes * params.output_dim;
+    int output_size = params.num_nodes * params.output_dim;
+
+    std::vector<float> host_input(input_size);
+    std::vector<float> host_l1_weight(l1_weight_size);
+    std::vector<float> host_l1_var1(l1_var1_size);
+    std::vector<float> host_l1_var2(l1_var2_size);
+    std::vector<float> host_adj_mat(adj_size);
+    std::vector<float> host_l2_weight(l2_weight_size);
+    std::vector<float> host_l2_var1(l2_var1_size);
+    std::vector<float> host_out(output_size);
+
+    PimBo *half_input, *half_l1_weight, *half_l1_var1, *half_l1_var2,
+          *half_adj_mat, *half_l2_weight, *half_l2_var1, *half_out;
 
     cuda_init_random_state(MAX_THREAD_PER_BLOCK);
 
@@ -38,6 +68,43 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data) {
     CUDAVariable *layer1_weight = &variables.back();
     //layer1_weight->glorot(params.input_dim, params.hidden_dim);
     layer1_weight->readbin("data/cora_layer1_weight.dat");
+
+    CUDA_CHECK(hipMemcpy(host_input.data(), input->data, 
+                         input_size*sizeof(float), hipMemcpyDeviceToHost));
+    CUDA_CHECK(hipMemcpy(host_l1_weight.data(), layer1_weight->data, 
+                         l1_weight_size*sizeof(float), hipMemcpyDeviceToHost));
+    //CUDA_CHECK(hipMemcpy(host_l1_var1.data(), layer1_var1->data, 
+    //                     l1_var1_size*sizeof(float), hipMemcpyDeviceToHost));
+
+    // convert float to half
+    half_input = PimCreateBo(1, 1, params.num_nodes, params.input_dim, PIM_FP16, MEM_TYPE_HOST);
+    half_l1_weight = PimCreateBo(1, 1, params.input_dim, params.hidden_dim, PIM_FP16, MEM_TYPE_HOST);
+    half_l1_var1 = PimCreateBo(1, 1, params.num_nodes, params.hidden_dim, PIM_FP16, MEM_TYPE_HOST);
+    set_half_data((half_float::half*)half_input->data, host_input.data(), input_size);
+    set_half_data((half_float::half*)half_l1_weight->data, host_l1_weight.data(), l1_weight_size);
+
+    pim_input = PimCreateBo(1, 1, params.num_nodes, params.input_dim, PIM_FP16, MEM_TYPE_DEVICE);
+    pim_l1_weight = PimCreateBo(1, 1, params.input_dim, params.hidden_dim, PIM_FP16, MEM_TYPE_DEVICE);
+    pim_l1_var1 = PimCreateBo(1, 1, params.num_nodes, params.hidden_dim, PIM_FP16, MEM_TYPE_DEVICE);
+    
+    PimCopyMemory(pim_input, half_input, HOST_TO_DEVICE);
+    PimSynchronize();
+    PimCopyMemory(pim_l1_weight, half_l1_weight, HOST_TO_DEVICE);
+    PimSynchronize();
+    bool fail = PimExecuteGemm(pim_l1_var1, pim_input, pim_l1_weight, nullptr);
+    std::cout << fail << std::endl;
+    PimSynchronize();
+
+    PimCopyMemory(half_l1_var1, pim_l1_var1, DEVICE_TO_HOST);
+    PimSynchronize();
+    set_float_data(host_l1_var1.data(), (half_float::half*)half_l1_var1->data, l1_var1_size);
+    variables.emplace_back(l1_var1_size);
+    CUDAVariable* checkv1 = &variables.back();
+    for (int i = 0; i < l1_var1_size; i++) {
+      checkv1->data[i] = host_l1_var1[i];
+    }
+    checkv1->write2txt("var1.txt",params.hidden_dim);
+
     modules.push_back(new CUDAMatmul(input, layer1_weight, layer1_var1, params.num_nodes, params.input_dim, params.hidden_dim));
     
     // graph sum

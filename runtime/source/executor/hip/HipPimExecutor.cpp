@@ -284,7 +284,7 @@ int HipPimExecutor::execute_hip_gemm(PimBo* output, PimBo* input, PimBo* weight,
     else if (weight->data_layout_type == PimDataLayoutType::ALIGNED_GEMM_WEIGHT)
         ret = execute_aligned_gemm_tile_accum(output, input, weight, bias, act_func, stream, block);
     else
-        DLOG(ERROR) << "Provided layout is not supported in GEMM call";
+        std::cout << "Provided layout is not supported in GEMM call";
     return ret;
 }
 
@@ -502,6 +502,7 @@ int HipPimExecutor::execute_custom_gemv(PimBo* output, PimBo* operand0, PimBo* o
         rocblas_gemv_fp16_Axy(mat, vec, out, m, n, k, alpha, beta, (hipStream_t)stream);
     } else {
         rocblas_gemv_fp16_xAy(vec, mat, out, m, n, k, alpha, beta, (hipStream_t)stream);
+        std::cout << "m: " << m << "n: " << n << "k: " << k << std::endl;
     }
 
     if (copy_to_device) {
