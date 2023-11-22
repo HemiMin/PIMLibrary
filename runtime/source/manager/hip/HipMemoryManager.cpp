@@ -542,6 +542,8 @@ int HipMemoryManager::convert_data_layout(PimBo* dst, PimBo* src, bool on_device
     int ret = 0;
     bool is_chwise = check_chwise_gemm_bo(src, gemm_order_);
 
+      // HYEMI
+      //std::cout << "is_chwise: " << is_chwise << std::endl;
     if (is_chwise) {
         ret = convert_data_layout_for_chwise_gemm_weight(dst, src, on_device, stream);
     } else {
@@ -776,6 +778,8 @@ int HipMemoryManager::convert_data_layout_for_aligned_gemm_weight(PimBo* dst, Pi
 
     if (src->bshape.w != src->bshape_r.w || src->bshape.h != src->bshape_r.h) {
         src_temp = (char*)calloc(src_size, sizeof(half_float::half));
+        // HYEMI
+        hipMalloc((void**) &src_data, src_size*sizeof(half_float::half));
         for (int i = 0; i < src->bshape_r.w; i++) {
             if (hipMemcpy((half_float::half*)src_temp + i * src->bshape.h,
                           (half_float::half*)src->data + i * src->bshape_r.h,
@@ -826,11 +830,30 @@ int HipMemoryManager::convert_data_layout_for_aligned_gemm_weight(PimBo* dst, Pi
                         for (int grfb_idx = 0; grfb_idx < num_grf_B; grfb_idx++) {
                             for (int grfa_idx = 0; grfa_idx < num_grf_A; grfa_idx++) {
                                 addr = addr_gen_safe(cidx, rank, bg, bank, row, col);
+                                // HYEMI
+                                //std::cout << "y: " << y << ", x: " << x 
+                                //          << ", tiled_y: " << tiled_y 
+                                //          << ", ch: " << cidx << ", bg: " << bg
+                                //          << ", bank: " << bank  << ", row: " << row
+                                //          << ", col: " << col << ", A: " << grfa_idx 
+                                //          << ", B: " << grfb_idx << " = ";
 #ifdef EMULATOR
                                 int d_idx = (y + tiled_y + grfa_idx) * in_cnt + x + grfb_idx;
 #else
                                 int d_idx = (y + tiled_y + grfb_idx) * in_cnt + x + grfa_idx;
 #endif
+                                int src_x = (d_idx*trans_size/type_size);
+                                int src_y = src_x;
+                                if (gemm_order_ == I_X_W) {
+                                  src_x /= src->bshape.h;
+                                  src_y %= src->bshape.h;
+                                } else {
+                                  src_x /= src->bshape.w;
+                                  src_y %= src->bshape.w;
+                                }
+                                // HYEMI
+                                //std::cout << "src_idx: " << (d_idx*trans_size/2) << "(" << src_x << "," << src_y << ")" 
+                                //  << ", dst_idx: " << addr/32 << std::endl;
                                 if (hipMemcpy(dst_data + addr, src_data + d_idx * trans_size, trans_size,
                                               hipMemcpyDeviceToDevice) != hipSuccess) {
                                     DLOG(INFO) << "[END] " << __FUNCTION__ << " Failed to copy";
@@ -871,11 +894,30 @@ int HipMemoryManager::convert_data_layout_for_aligned_gemm_weight(PimBo* dst, Pi
                         for (int grfb_idx = 0; grfb_idx < num_grf_B; grfb_idx++) {
                             for (int grfa_idx = 0; grfa_idx < num_grf_A; grfa_idx++) {
                                 addr = addr_gen_safe(cidx, rank, bg, bank + 1, row, col);
+                                // HYEMI
+                                //std::cout << "y: " << y << ", x: " << x 
+                                //          << ", tiled_y: " << tiled_y 
+                                //          << ", ch: " << cidx << ", bg: " << bg
+                                //          << ", bank: " << bank+1  << ", row: " << row
+                                //          << ", col: " << col << ", A: " << grfa_idx 
+                                //          << ", B: " << grfb_idx << " = ";
 #ifdef EMULATOR
                                 int d_idx = (y + tiled_y + grfa_idx) * in_cnt + x + grfb_idx;
 #else
                                 int d_idx = (y + tiled_y + grfb_idx) * in_cnt + x + grfa_idx;
 #endif
+                                int src_x = (d_idx*trans_size/type_size);
+                                int src_y = src_x;
+                                if (gemm_order_ == I_X_W) {
+                                  src_x /= src->bshape.h;
+                                  src_y %= src->bshape.h;
+                                } else {
+                                  src_x /= src->bshape.w;
+                                  src_y %= src->bshape.w;
+                                }
+                                // HYEMI
+                                //std::cout << "src_idx: " << (d_idx*trans_size/2) << "(" << src_x << "," << src_y << ")" 
+                                //  << ", dst_idx: " << addr/32 << std::endl;
                                 if (hipMemcpy(dst_data + addr, src_data + d_idx * trans_size, trans_size,
                                               hipMemcpyDeviceToDevice) != hipSuccess) {
                                     DLOG(INFO) << "[END] " << __FUNCTION__ << " Failed to copy";
