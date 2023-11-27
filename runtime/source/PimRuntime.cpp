@@ -393,11 +393,17 @@ PimBo* PimRuntime::get_preloaded_pim_gemm_weight(PimBo* dev_wei, PimGemmOrder ge
 
             host_weight = PimCreateBo(bshape->n, bshape->c, bshape->h, bshape->w, PIM_FP16, MEM_TYPE_HOST);
             host_weight_t = PimCreateBo(bshape->n, bshape->c, bshape->h, bshape->w, PIM_FP16, MEM_TYPE_HOST);
+            //HYEMI
+            //host_weight->bshape_r = dev_wei->bshape_r;
             host_reordered_weight = PimCreateBo(bshape->n, bshape->c, bshape->h, bshape->w, PIM_FP16, MEM_TYPE_HOST);
             pre_wei = PimCreateBo(bshape->n, bshape->c, bshape->h, bshape->w, PIM_FP16, MEM_TYPE_PIM);
 
             if (check_need_for_transpose(gemm_order, dev_wei) == true) {
+              // HYEMI
+              // copy memory with size not change data memory layout..
+              
                 pim_manager_->copy_memory(host_weight_t, dev_wei, DEVICE_TO_HOST);
+                //pim_manager_->copy_memory(host_weight_t, dev_wei, dev_wei->size_r, DEVICE_TO_HOST);
                 transpose_pimbo(host_weight, host_weight_t);
             } else {
                 pim_manager_->copy_memory(host_weight, dev_wei, DEVICE_TO_HOST);
@@ -406,6 +412,8 @@ PimBo* PimRuntime::get_preloaded_pim_gemm_weight(PimBo* dev_wei, PimGemmOrder ge
             pim_manager_->set_gemm_order(gemm_order);
             pim_manager_->convert_data_layout(host_reordered_weight, host_weight, false, nullptr);
             PimCopyMemory(pre_wei, host_reordered_weight, HOST_TO_PIM);
+            //PimCopyMemory(pre_wei, host_reordered_weight, dev_wei->size_r, HOST_TO_PIM);
+            //pre_wei->data_layout_type = PimDataLayoutType::ALIGNED_GEMM_WEIGHT;
 
             PimDestroyBo(host_weight);
             PimDestroyBo(host_weight_t);
@@ -451,6 +459,39 @@ PimBo* PimRuntime::generate_gemm_weight_from_buffer(PimBo* src, PimGemmOrder gem
 
     DLOG(INFO) << "[END] " << __FUNCTION__ << " called";
     return pim_reordered_buff;
+}
+
+int PimRuntime::pad_aligned_bo(PimBo* dst, PimBo* src)
+{
+  DLOG(INFO) << "[START] " << __FUNCTION__ << " called";
+  int ret = 0;
+
+  hipMemcpyKind kind = hipMemcpyDeviceToDevice;
+
+  if (src->mem_type == MEM_TYPE_HOST) kind = hipMemcpyHostToHost;
+
+  hipMemset(dst->data, 0, dst->size);
+  for (int n = 0; n < src->bshape_r.n; n++) {
+    for (int c = 0; c < src->bshape_r.c; c++) {
+      for (int h = 0; h < src->bshape_r.h; h++) {
+        if (hipMemcpy(((half_float::half*)dst->data) + 
+                       n*(src->bshape_r.c*dst->bshape.h*dst->bshape.w) +
+                       c*(dst->bshape.h*dst->bshape.w) +
+                       h * dst->bshape.w,
+              ((half_float::half*)src->data) + 
+               n*(src->bshape_r.c*src->bshape_r.h*src->bshape_r.w) +
+               c*(src->bshape_r.h*src->bshape_r.w) +
+               h * src->bshape_r.w,
+              src->bshape_r.w * sizeof(half_float::half), kind) != hipSuccess) {
+          DLOG(INFO) << "[END] " << __FUNCTION__ << " Failed to pad";
+          return -1;
+        }
+      }
+    }
+  }
+
+  DLOG(INFO) << "[END] " << __FUNCTION__ << " called";
+  return ret;
 }
 
 #if PIM_COMPILER_ENABLE == 1

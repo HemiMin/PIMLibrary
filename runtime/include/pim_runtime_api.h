@@ -127,6 +127,16 @@ __PIM_API__ PimBo* PimCreateBo(PimDesc* pim_desc, PimMemType mem_type, PimMemFla
 __PIM_API__ PimBo* PimCreateBo(PimGemmDesc* pim_gemm_desc, PimMemType mem_type, PimMemFlag mem_flag,
                                void* user_ptr = nullptr, bool trasnposed = false);
 
+
+/**
+ * @brief create aligned pim buffer object of src pim buffer object
+ *
+ * @param pointer to src buffer object 
+ *
+ * @return pointer to aligned buffer object
+ */
+__PIM_API__ PimBo* PimCreateAlignedBo(PimBo* src);
+
 /**
  * @brief Destroy Buffer object
  *

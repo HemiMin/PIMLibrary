@@ -235,6 +235,28 @@ PimBo* PimCreateBo(PimGemmDesc* pim_gemm_desc, PimMemType mem_type, PimMemFlag m
     return pim_bo;
 }
 
+PimBo* PimCreateAlignedBo(PimBo* src)
+{
+  DLOG(INFO) << "[START] " << __FUNCTION__ << " called";
+  PIM_PROFILE_TICK(CreateBo);
+
+  if (pim_runtime == nullptr) {
+      DLOG(ERROR) << "PimRuntime is not initialized";
+      DLOG(INFO) << "[END] " << __FUNCTION__ << " called";
+      return nullptr;
+  }
+
+  PimBo* pim_bo = PimCreateBo(src->bshape.n, src->bshape.c,
+                              src->bshape.h, src->bshape.w, 
+                              src->precision, src->mem_type, nullptr,
+                              src->transposed);
+  pim_runtime->pad_aligned_bo(pim_bo, src);
+  PIM_PROFILE_TOCK(CreateBo);
+
+  DLOG(INFO) << "[END] " << __FUNCTION__ << " called";
+  return pim_bo;
+}
+
 PimGemmDesc* PimCreateGemmDesc(int n, int c, int in_h, int in_w, int out_h, int out_w, PimPrecision precision,
                                PimGemmOrder gemm_order)
 {
