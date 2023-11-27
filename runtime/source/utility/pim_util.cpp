@@ -285,6 +285,9 @@ bool check_chwise_gemm_bo(PimBo* bo, PimGemmOrder gemm_order)
 
 bool is_pim_applicable(PimBo* wei, PimGemmOrder gemm_order)
 {
+  //HYEMI
+  //temporary, just always use pim
+  //return true;
     if (wei->data_layout_type != PimDataLayoutType::RAW) {
         // PIM-specific layout has been already created
         return true;
