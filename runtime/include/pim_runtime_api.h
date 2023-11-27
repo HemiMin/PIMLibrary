@@ -251,6 +251,17 @@ __PIM_API__ int PimFreeMemory(PimBo* pim_bo);
 __PIM_API__ int PimCopyMemory(void* dst, void* src, size_t size, PimMemCpyType cpy_type);
 
 /**
+ * @brief Copies data from aligned source buffer object original size destination buffer object
+ *
+ * @param dst destination buffer object
+ * @param src source buffer object
+ * @param cpy_type type of memory transfer (HOST to GPU, GPU to HOST, GPU to PIM etc)
+ *
+ * @return successs/failure
+ */
+__PIM_API__ int PimCopyMemoryFromAligned(PimBo* dst, PimBo* src, PimMemCpyType cpy_type);
+
+/**
  * @brief Copies data from source buffer object o destination buffer object
  *
  * @param dst destination buffer object

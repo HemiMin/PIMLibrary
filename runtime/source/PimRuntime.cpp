@@ -217,6 +217,37 @@ int PimRuntime::copy_memory(PimBo* dst, PimBo* src, PimMemCpyType cpy_type)
     return ret;
 }
 
+int PimRuntime::copy_memory_from_aligned(PimBo* dst, PimBo* src, PimMemCpyType cpy_type)
+{
+  DLOG(INFO) << "[START] " << __FUNCTION__ << " called";
+  int ret = 0;
+
+  hipMemcpyKind kind = hipMemcpyDeviceToDevice;
+
+  if (src->mem_type == MEM_TYPE_HOST) kind = hipMemcpyHostToHost;
+  for (int n = 0; n < dst->bshape_r.n; n++) {
+    for (int c = 0; c < dst->bshape_r.c; c++) {
+      for (int h = 0; h < dst->bshape_r.h; h++) {
+        if (hipMemcpy(((half_float::half*)dst->data) + 
+                       n*(dst->bshape_r.c*dst->bshape_r.h*dst->bshape_r.w) +
+                       c*(dst->bshape_r.h*dst->bshape_r.w) +
+                       h * dst->bshape_r.w,
+              ((half_float::half*)src->data) + 
+               n*(src->bshape.c*src->bshape.h*src->bshape.w) +
+               c*(src->bshape.h*src->bshape.w) +
+               h * src->bshape.w,
+              dst->bshape_r.w * sizeof(half_float::half), kind) != hipSuccess) {
+          DLOG(INFO) << "[END] " << __FUNCTION__ << " Failed to pad";
+          return -1;
+        }
+      }
+    }
+  }
+
+  DLOG(INFO) << "[END] " << __FUNCTION__ << " called";
+  return ret;
+}
+
 int PimRuntime::copy_memory_3d(const PimCopy3D* copy_params)
 {
     DLOG(INFO) << "[START] " << __FUNCTION__ << " called";
