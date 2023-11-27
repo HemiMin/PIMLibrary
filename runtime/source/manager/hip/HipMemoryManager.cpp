@@ -366,6 +366,7 @@ int HipMemoryManager::alloc_memory(PimBo* pim_bo)
     return ret;
 }
 
+
 int HipMemoryManager::free_memory(void* ptr, PimMemType mem_type)
 {
     DLOG(INFO) << "[START] " << __FUNCTION__ << " called";
@@ -560,6 +561,7 @@ int HipMemoryManager::convert_data_layout(PimBo* dst, PimBo* src, bool on_device
 
 int HipMemoryManager::convert_data_layout_for_chwise_gemm_weight(PimBo* dst, PimBo* src, bool on_device, void* stream)
 {
+  std::cout << "chwise" << std::endl;
     DLOG(INFO) << "[START] " << __FUNCTION__ << " called";
     int ret = 0;
     if (on_device) {
@@ -731,6 +733,7 @@ int HipMemoryManager::convert_data_layout_for_chwise_gemm_weight(PimBo* dst, Pim
 
 int HipMemoryManager::convert_data_layout_for_aligned_gemm_weight(PimBo* dst, PimBo* src, bool on_device, void* stream)
 {
+  std::cout << "align" << std::endl;
     DLOG(INFO) << "[START] " << __FUNCTION__ << " called";
     int ret = 0;
 
@@ -776,10 +779,12 @@ int HipMemoryManager::convert_data_layout_for_aligned_gemm_weight(PimBo* dst, Pi
         in_cnt = src->bshape.w * type_size / trans_size;
     }
 
+    bool new_src_data = false;
     if (src->bshape.w != src->bshape_r.w || src->bshape.h != src->bshape_r.h) {
+      new_src_data = true;
         src_temp = (char*)calloc(src_size, sizeof(half_float::half));
         // HYEMI
-        hipMalloc((void**) &src_data, src_size*sizeof(half_float::half));
+        //hipMalloc((void**) &src_data, src_size*sizeof(half_float::half));
         for (int i = 0; i < src->bshape_r.w; i++) {
             if (hipMemcpy((half_float::half*)src_temp + i * src->bshape.h,
                           (half_float::half*)src->data + i * src->bshape_r.h,
@@ -818,6 +823,7 @@ int HipMemoryManager::convert_data_layout_for_aligned_gemm_weight(PimBo* dst, Pi
         odd_s_row = 0;
         odd_s_col = 0;
         dst_data = (char*)dst->data + data_offset;
+        //if (!new_src_data) src_data = (char*)src->data + data_offset;
         src_data = (char*)src->data + data_offset;
 
         for (int y = 0; y < out_cnt; y += out_tile_size) {
