@@ -5,15 +5,55 @@
 #include "common_perf.h"
 #include "timer.h"
 #include <algorithm>
-#include <algorithm>
 #include <thrust/transform.h>
 
 using std::max;
 using std::max_element;
 using half_float::half;
 
+void h2f(float* dst, half_float::half* src, int size)
+{
+  for (int i = 0; i < size; i++) {
+    dst[i] = float(src[i]);
+  }
+}
+
+void f2h(half_float::half* dst, float* src, int size)
+{
+  for (int i = 0; i < size; i++) {
+    dst[i] = half_float::half(src[i]);
+  }
+}
+
+void print_pimbo(PimBo* bo, const char* str = nullptr, int col = 0)
+{
+    if (bo == nullptr) {
+        printf("PimBo structure is null\n");
+        return;
+    }
+
+    char prefix[1024] = {
+        0,
+    };
+    for (int i = 0; i < 128; i ++) {
+    for (int j = 0; j < col; j ++) {
+      std::cout << ((half_float::half*)bo->data)[i*col+j] << " " ;
+    }
+    std::cout << std::endl;
+    }
+
+    printf("%s %s\n", prefix, (str == nullptr ? "" : str));
+    printf("%s mem_type:%d, precision:%d, size:%lu, user_ptr:%d\n", prefix, bo->mem_type, bo->precision, bo->size,
+           bo->use_user_ptr);
+    printf("%s bshape(n:%d, c:%d, h:%d, w:%d)\n", prefix, bo->bshape.n, bo->bshape.c, bo->bshape.h, bo->bshape.w);
+    printf("%s bshape_r(n:%d, c:%d, h:%d, w:%d)\n", prefix, bo->bshape_r.n, bo->bshape_r.c, bo->bshape_r.h,
+           bo->bshape_r.w);
+    printf("\n");
+}
+
 CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data) {
 
+  params.num_nodes = 40;
     // PimBo vars
     PimBo *pim_input, *pim_l1_weight, *pim_l1_var1, *pim_l1_var2,
           *pim_adj_mat, *pim_l2_weight, *pim_l2_var1, *pim_out;
@@ -49,21 +89,25 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data) {
     variables.reserve(9);
 
     variables.emplace_back(params.num_nodes * params.num_nodes);
+    // variables[0]
     CUDAVariable *adj_mat = &variables.back();
-    adj_mat->readbin("data/cora_adj.dat");
+    adj_mat->readbin("data/cora_adj.dat",40,2708);
     adj_mat->write2txt("adj.txt",params.num_nodes);
 
     // dropout
     //variables.emplace_back(data->feature_index.indices.size(), false);
     variables.emplace_back(params.num_nodes * params.input_dim, false);
+    // variables[1]
     input = &variables.back();
     input->readbin("data/cora_input.dat");
     //input->write2txt("cora_input.txt", params.input_dim);
     modules.push_back(new CUDADropout(input, params.dropout));
     
     // sparse matmul
+    // variables[2]
     variables.emplace_back(params.num_nodes * params.hidden_dim);
     CUDAVariable *layer1_var1 = &variables.back();
+    // variables[3]
     variables.emplace_back(params.input_dim * params.hidden_dim, true);
     CUDAVariable *layer1_weight = &variables.back();
     //layer1_weight->glorot(params.input_dim, params.hidden_dim);
@@ -73,6 +117,8 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data) {
                          input_size*sizeof(float), hipMemcpyDeviceToHost));
     CUDA_CHECK(hipMemcpy(host_l1_weight.data(), layer1_weight->data, 
                          l1_weight_size*sizeof(float), hipMemcpyDeviceToHost));
+    CUDA_CHECK(hipMemcpy(host_adj_mat.data(), adj_mat->data, 
+                         adj_size*sizeof(float), hipMemcpyDeviceToHost));
     //CUDA_CHECK(hipMemcpy(host_l1_var1.data(), layer1_var1->data, 
     //                     l1_var1_size*sizeof(float), hipMemcpyDeviceToHost));
 
@@ -80,35 +126,91 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data) {
     half_input = PimCreateBo(1, 1, params.num_nodes, params.input_dim, PIM_FP16, MEM_TYPE_HOST);
     half_l1_weight = PimCreateBo(1, 1, params.input_dim, params.hidden_dim, PIM_FP16, MEM_TYPE_HOST);
     half_l1_var1 = PimCreateBo(1, 1, params.num_nodes, params.hidden_dim, PIM_FP16, MEM_TYPE_HOST);
-    set_half_data((half_float::half*)half_input->data, host_input.data(), input_size);
-    set_half_data((half_float::half*)half_l1_weight->data, host_l1_weight.data(), l1_weight_size);
+    half_adj_mat = PimCreateBo(1, 1, params.num_nodes, params.num_nodes, PIM_FP16, MEM_TYPE_HOST);
+
+    f2h((half_float::half*)half_input->data, host_input.data(), input_size);
+    f2h((half_float::half*)half_l1_weight->data, host_l1_weight.data(), l1_weight_size);
+    f2h((half_float::half*)half_adj_mat->data, host_adj_mat.data(), adj_size);
 
     pim_input = PimCreateBo(1, 1, params.num_nodes, params.input_dim, PIM_FP16, MEM_TYPE_DEVICE);
+    pim_input->bshape = {1,1,(uint32_t)params.num_nodes,6*256};
+    //pim_l1_weight = PimCreateBo(1, 1, params.input_dim, params.hidden_dim, PIM_FP16, MEM_TYPE_DEVICE);
     pim_l1_weight = PimCreateBo(1, 1, params.input_dim, params.hidden_dim, PIM_FP16, MEM_TYPE_DEVICE);
-    pim_l1_var1 = PimCreateBo(1, 1, params.num_nodes, params.hidden_dim, PIM_FP16, MEM_TYPE_DEVICE);
-    
+    pim_l1_weight->bshape = {1,1,6*256,4096};
+    pim_l1_var1 = PimCreateBo(1, 1, (uint32_t)params.num_nodes, params.hidden_dim, PIM_FP16, MEM_TYPE_DEVICE);
+    pim_l1_var1->bshape = {1,1,(uint32_t)params.num_nodes,4096};
+    pim_l1_var2 = PimCreateBo(1, 1, params.num_nodes, params.hidden_dim, PIM_FP16, MEM_TYPE_DEVICE);
+    pim_l1_var2->bshape = {1,1,(uint32_t)params.num_nodes,4096};
+    pim_adj_mat = PimCreateBo(1, 1, params.num_nodes, params.num_nodes, PIM_FP16, MEM_TYPE_DEVICE);
+    pim_adj_mat->bshape = {1,1,(uint32_t)params.num_nodes,256};
+    //pim_l1_weight->data_layout_type = PimDataLayoutType::CHWISE_GEMM_WEIGHT;
+
+
     PimCopyMemory(pim_input, half_input, HOST_TO_DEVICE);
-    PimSynchronize();
     PimCopyMemory(pim_l1_weight, half_l1_weight, HOST_TO_DEVICE);
-    PimSynchronize();
-    bool fail = PimExecuteGemm(pim_l1_var1, pim_input, pim_l1_weight, nullptr);
-    std::cout << fail << std::endl;
+    PimCopyMemory(pim_adj_mat, half_adj_mat, HOST_TO_DEVICE);
     PimSynchronize();
 
-    PimCopyMemory(half_l1_var1, pim_l1_var1, DEVICE_TO_HOST);
+    PimBo* alignedi = PimCreateAlignedBo(pim_input);
+    PimBo* aligned_l1_w = PimCreateAlignedBo(pim_l1_weight);
+    PimBo* aligned_l1_v1 = PimCreateAlignedBo(pim_l1_var1);
+    PimBo* alignedadj = PimCreateAlignedBo(pim_adj_mat);
+    PimBo* aligned_l1_v2 = PimCreateAlignedBo(pim_l1_var2);
+    //print_pimbo(pim_l1_weight, "originw",16);
+    //print_pimbo(alignedw, "alignedw",4096);
+    //std::cerr << "adj" << std::endl;
+    //for (int r = 0; r < 40; r++) {
+    //  for (int c = 0; c < 40; c++) {
+    //    std::cerr << (float)(((half_float::half*)alignedadj->data)[r*256 + c]) << " ";
+    //  }
+    //  std::cerr << std::endl;
+    //}
+    
     PimSynchronize();
-    set_float_data(host_l1_var1.data(), (half_float::half*)half_l1_var1->data, l1_var1_size);
-    variables.emplace_back(l1_var1_size);
-    CUDAVariable* checkv1 = &variables.back();
-    for (int i = 0; i < l1_var1_size; i++) {
-      checkv1->data[i] = host_l1_var1[i];
-    }
-    checkv1->write2txt("var1.txt",params.hidden_dim);
+    PimExecuteGemm(aligned_l1_v1, alignedi, aligned_l1_w, nullptr, PimActFunc::NONE, I_X_W);
+    PimSynchronize();
+    aligned_l1_v1->bshape = {1,1,256,4096};
+    PimBo* aligned_l1_v1_2 = PimCreateAlignedBo(aligned_l1_v1);
+    PimExecuteGemm(aligned_l1_v2, alignedadj, aligned_l1_v1_2, nullptr, PimActFunc::ACT_RELU, I_X_W);
+    PimSynchronize();
+    PimCopyMemoryFromAligned(pim_l1_var2, aligned_l1_v2, DEVICE_TO_DEVICE);
+
+    //std::cerr << "adj" << std::endl;
+    //for (int r = 0; r < params.num_nodes; r++) {
+    //  for (int c = 0; c < params.num_nodes; c++) {
+    //    std::cerr << (float)(((half_float::half*)alignedadj->data)[r*256 + c]) << " ";
+    //  }
+    //  std::cerr << std::endl;
+    //}
+    //std::cerr << "var1" << std::endl;
+    //for (int r = 0; r < params.num_nodes; r++) {
+    //  for (int c = 0; c < 16; c++) {
+    //    std::cerr << (float)(((half_float::half*)aligned_l1_v1->data)[r*4096 + c]) << " ";
+    //  }
+    //  std::cerr << std::endl;
+    //}
+    //std::cerr << "var1_2" << std::endl;
+    //for (int r = 0; r < params.num_nodes; r++) {
+    //  for (int c = 0; c < 16; c++) {
+    //    std::cerr << (float)(((half_float::half*)aligned_l1_v1_2->data)[r*4096 + c]) << " ";
+    //  }
+    //  std::cerr << std::endl;
+    //}
+    //std::cerr << "var" << std::endl;
+    //for (int r = 0; r < params.num_nodes; r++) {
+    //  for (int c = 0; c < 16; c++) {
+    //    std::cerr << float((((half_float::half*)pim_l1_var2->data)[r*16 + c])) << " ";
+    //  }
+    //  std::cerr << std::endl;
+    //}
+
+    PimSynchronize();
 
     modules.push_back(new CUDAMatmul(input, layer1_weight, layer1_var1, params.num_nodes, params.input_dim, params.hidden_dim));
     
     // graph sum
     variables.emplace_back(params.num_nodes * params.hidden_dim);
+    // variables[5]
     CUDAVariable *layer1_var2 = &variables.back();
     //modules.push_back(new CUDAGraphSum(layer1_var1, layer1_var2, graph, params.hidden_dim));
     modules.push_back(new CUDAMatmul(adj_mat, layer1_var1, layer1_var2, params.num_nodes, params.num_nodes, params.hidden_dim));
@@ -128,11 +230,48 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data) {
     layer2_weight->readbin("data/cora_layer2_weight.dat");
     modules.push_back(new CUDAMatmul(layer1_var2, layer2_weight, layer2_var1, params.num_nodes, params.hidden_dim, params.output_dim));
 
-    // graph sum
+    CUDA_CHECK(hipMemcpy(host_l2_weight.data(), layer2_weight->data, 
+                         l2_weight_size*sizeof(float), hipMemcpyDeviceToHost));
+    half_l2_weight = PimCreateBo(1, 1, params.hidden_dim, params.output_dim, PIM_FP16, MEM_TYPE_HOST);
+    f2h((half_float::half*)half_l2_weight->data, host_l2_weight.data(), l2_weight_size);
+    pim_l2_weight = PimCreateBo(1, 1, params.hidden_dim, params.output_dim, PIM_FP16, MEM_TYPE_DEVICE);
+    pim_l2_weight->bshape = {1,1,256,4096};
+    pim_l2_var1 = PimCreateBo(1, 1, params.num_nodes, params.output_dim, PIM_FP16, MEM_TYPE_DEVICE);
+    pim_l2_var1->bshape = {1,1,(uint32_t)params.num_nodes,4096};
+    pim_out = PimCreateBo(1, 1, params.num_nodes, params.output_dim, PIM_FP16, MEM_TYPE_DEVICE);
+    pim_out->bshape = {1,1,(uint32_t)params.num_nodes,4096};
+
+    PimCopyMemory(pim_l2_weight, half_l2_weight, HOST_TO_DEVICE);
+
+    aligned_l1_v2->bshape = {1,1,(uint32_t)params.num_nodes,256};
+    PimBo* aligned_l1_v2_2 = PimCreateAlignedBo(aligned_l1_v2);
+    PimBo* aligned_l2_w = PimCreateAlignedBo(pim_l2_weight);
+    PimBo* aligned_l2_v1 = PimCreateAlignedBo(pim_l2_var1);
+    PimBo* aligned_out = PimCreateAlignedBo(pim_out);
+
+    PimSynchronize();
+    PimExecuteGemm(aligned_l2_v1, aligned_l1_v2_2, aligned_l2_w, nullptr, PimActFunc::NONE, I_X_W);
+    PimSynchronize();
+    aligned_l2_v1->bshape = {1,1,256,4096};
+    PimBo* aligned_l2_v1_2 = PimCreateAlignedBo(aligned_l2_v1);
+    PimExecuteGemm(aligned_out, alignedadj, aligned_l2_v1_2, nullptr, PimActFunc::NONE, I_X_W);
+    PimCopyMemoryFromAligned(pim_out, aligned_out, DEVICE_TO_DEVICE);
+    half_out = PimCreateBo(1, 1, params.num_nodes, params.output_dim, PIM_FP16, MEM_TYPE_HOST);
+    PimCopyMemory(half_out, pim_out, DEVICE_TO_HOST);
+
+    //graph sum
     variables.emplace_back(params.num_nodes * params.output_dim);
     output = &variables.back();
+    h2f(output->data, (half_float::half*)half_out->data, output_size);
+
+    for (int r = 0; r < params.num_nodes; r++) {
+      for (int c = 0; c < params.output_dim; c++) {
+        std::cerr << (float)output->data[r*7 + c] << " ";
+      }
+      std::cerr << std::endl;
+    }
     //modules.push_back(new CUDAGraphSum(layer2_var1, output, graph, params.output_dim));
-    modules.push_back(new CUDAMatmul(adj_mat, layer2_var1, output, params.num_nodes, params.num_nodes, params.output_dim));
+    //modules.push_back(new CUDAMatmul(adj_mat, layer2_var1, output, params.num_nodes, params.num_nodes, params.output_dim));
 
     // cross entropy loss
     CUDA_CHECK(hipMalloc((void**) &truth, params.num_nodes * sizeof(int)));

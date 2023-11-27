@@ -73,6 +73,29 @@ void CUDAVariable::readbin(std::string name) {
   std::vector<float> cpu_data;
   while(in.read(reinterpret_cast<char*>(&x), sizeof(float))){
       cpu_data.push_back(x);
+      if (cpu_data.size() == x) break;
+  }
+  CUDA_CHECK(hipMemcpy(data, cpu_data.data(), size * sizeof(float), hipMemcpyHostToDevice));
+}
+
+void CUDAVariable::readbin(std::string name, int cut_col, int origin_col) {
+  std::ifstream in(name, std::ios::binary);
+  int idx = 0;
+  int r = 0;
+  int c = 0;
+  float x;
+  std::vector<float> cpu_data;
+  while(in.read(reinterpret_cast<char*>(&x), sizeof(float))){
+    if (c/origin_col>0) {
+      c=0;
+    }if (c/cut_col >0) {
+      c++;
+      continue;
+    } else {
+      c++;
+      cpu_data.push_back(x);
+      if (cpu_data.size() == x) break;
+    }
   }
   CUDA_CHECK(hipMemcpy(data, cpu_data.data(), size * sizeof(float), hipMemcpyHostToDevice));
 }

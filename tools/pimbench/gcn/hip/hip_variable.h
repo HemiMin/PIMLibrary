@@ -21,6 +21,7 @@ public:
     void write2txt(std::string name, int col);
     void write2bin(std::string name);
     void readbin(std::string name);
+    void readbin(std::string name, int cut_col, int origin_col);
     float grad_norm();
 };
 
