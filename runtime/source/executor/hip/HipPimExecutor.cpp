@@ -256,6 +256,7 @@ int HipPimExecutor::execute_gemm(PimBo* output, PimBo* input, PimBo* weight, Pim
     // if data layout is applicable to pim, execute on PIM, or execute on GPU
     } else {
         if (is_pim_applicable(weight, gemm_order_)) {
+          std::cout << "Run on PIM" << std::endl;
             PimBo* pim_wei;
             if (weight->data_layout_type == PimDataLayoutType::RAW) {
                 pim_wei = pim_runtime_->get_preloaded_pim_gemm_weight(weight, gemm_order_);
@@ -269,6 +270,7 @@ int HipPimExecutor::execute_gemm(PimBo* output, PimBo* input, PimBo* weight, Pim
             ret = this->execute_hip_gemm(output, input, pim_wei, bias, act_func, stream, block);
             if (gemm_order_ == W_X_I) set_pimbo_t(input, pim_wei, bias, output);
         } else {
+          std::cout << "Run on GPU" << std::endl;
             ret = this->execute_gemv(output, input, weight, bias, act_func, stream, block);
         }
     }
@@ -502,7 +504,6 @@ int HipPimExecutor::execute_custom_gemv(PimBo* output, PimBo* operand0, PimBo* o
         rocblas_gemv_fp16_Axy(mat, vec, out, m, n, k, alpha, beta, (hipStream_t)stream);
     } else {
         rocblas_gemv_fp16_xAy(vec, mat, out, m, n, k, alpha, beta, (hipStream_t)stream);
-        std::cout << "m: " << m << "n: " << n << "k: " << k << std::endl;
     }
 
     if (copy_to_device) {
@@ -590,6 +591,9 @@ int HipPimExecutor::execute_aligned_gemm_tile_accum(PimBo* output, PimBo* input,
     int n_in_tile = input->bshape.w * sizeof(uint16_t) / pbi_->trans_size / pbi_->num_grf_A;
     int n_out_tile = output->bshape.w / (pbi_->num_pim_chan * pbi_->num_pim_blocks * pbi_->num_grf_B);
     int iter_cnt = weight->bshape.n * weight->bshape.c * weight->bshape.w / PIM_GEMV_OUT_ALIGN;
+    std::cout << "inputw: " << input->bshape.w << std::endl;
+    std::cout << "n_in_tile: " << n_in_tile << ",n_out_tile: " << n_out_tile
+              << ", iter_cnt: " << iter_cnt << std::endl;
     int is_bias = (bias != nullptr) ? 1 : 0;
     int is_relu = (act_func == ACT_RELU) ? 1 : 0;
 

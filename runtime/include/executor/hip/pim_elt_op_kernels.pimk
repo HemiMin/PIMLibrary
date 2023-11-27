@@ -76,7 +76,7 @@ __global__ void elt_op_pim(volatile uint8_t* __restrict__ operand0, volatile uin
             unsigned int col = loc % num_col;
 
             addr = addr_gen(hipBlockIdx_x, 0, 0, 0, row, col);
-            printf("tile_idx: %d, ch: %d, row: %d, col: %d, addr:%d\n", tile_idx, hipBlockIdx_x, row, col, addr/32);
+            //printf("tile_idx: %d, ch: %d, row: %d, col: %d, addr:%d\n", tile_idx, hipBlockIdx_x, row, col, addr/32);
 
             addr_even = addr + offset;
             addr_odd = addr_even + 0x2000;

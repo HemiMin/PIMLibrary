@@ -24,6 +24,14 @@ void rocblas_gemv_fp16_Axy(void *A, void *x, void *y, int m, int n, int k, float
 template <int NB_X, typename T, typename U>
 __device__ void gemvt_kernel_calc_xAy(int m, int n, U alpha, const T *x, int lda, const T *A, int incx, U beta, T *y)
 {
+  // m = wt.h
+  // n = wt.w
+  // x = in
+  // lda = wt.h 
+  // A = mat(wt)
+  // incx = wt.w
+  // y = out
+
     int tx = hipThreadIdx_x;
 
     if (tx < m) A += tx * incx;
@@ -36,6 +44,7 @@ __device__ void gemvt_kernel_calc_xAy(int m, int n, U alpha, const T *x, int lda
 
     // partial sums
     int m_full = (m / NB_X) * NB_X;
+    // m_full = (wt.h/256) * 256
 
     for (int i = 0; i < m_full; i += NB_X) res += x[i + tx] * A[i * incx];
 
@@ -75,6 +84,7 @@ __global__ void gemvt_kernel_xAy(int m, int n, U alpha_device_host, const V *xa,
 
     auto alpha = alpha_device_host;
     auto beta = beta_device_host;
+    // NB_X == 256
     gemvt_kernel_calc_xAy<NB_X>(m, n, alpha, x, lda, A, incx, beta, y);
 }
 
