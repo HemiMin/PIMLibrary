@@ -29,6 +29,8 @@ class PerformanceAnalyser
     virtual int ExecuteTest() = 0;
     void calculate_gflops(double flt_ops);
     std::chrono::duration<double> calculate_elapsed_time();
+    void accumulate_kernel_time(std::chrono::duration<double> time);
+    void accumulate_align_time(std::chrono::duration<double> time);
     void calculate_avg_time();
 
    protected:
@@ -51,6 +53,7 @@ class PerformanceAnalyser
     std::chrono::duration<double> start_up_time_;
     std::chrono::duration<double> avg_kernel_time_;
     std::chrono::duration<double> kernel_execution_time_;
+    std::chrono::duration<double> aligning_time_;
     std::chrono::time_point<std::chrono::high_resolution_clock> start_, end_;
 };
 

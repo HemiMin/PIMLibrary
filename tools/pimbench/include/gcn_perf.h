@@ -8,7 +8,7 @@ class PimGCNTest
     PimGCNTest();
     ~PimGCNTest();
     void prepare(float variation = 0.01f);
-    void execute_op(bool block = true);
+    void execute_op(PerformanceAnalyser* pa, bool block = true);
     void finalize();
     int validate(float epsilon = 1e-2);
 

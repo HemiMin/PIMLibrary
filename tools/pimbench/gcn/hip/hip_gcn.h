@@ -4,6 +4,7 @@
 #include "gcn.h"
 #include "hip_variable.h"
 #include "hip_module.h"
+#include "common_perf.h"
 
 using std::vector;
 using std::pair;
@@ -27,7 +28,7 @@ class CUDAGCN {
     GCNData *data;
 public:
     GCNParams params;
-    CUDAGCN(GCNParams params, GCNData *input_data);
+    CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa);
     CUDAGCN() {}
     ~CUDAGCN();
     void run();

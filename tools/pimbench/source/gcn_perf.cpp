@@ -30,7 +30,7 @@ void PimGCNTest::prepare(float variation)
 {
 }
 
-void PimGCNTest::execute_op(bool block)
+void PimGCNTest::execute_op(PerformanceAnalyser* pa, bool block)
 {
     GCNParams params = GCNParams::get_default();
     GCNData data;
@@ -43,7 +43,7 @@ void PimGCNTest::execute_op(bool block)
 
     #ifdef __HIPCC__
     std::cout << "RUNNING ON GPU(HIP)" << std::endl;
-    CUDAGCN cuda_gcn(params, &data);
+    CUDAGCN cuda_gcn(params, &data, pa);
     cuda_gcn.run();
     #else
     std::cout << "RUNNING ON CPU" << std::endl;
@@ -69,7 +69,7 @@ int PimGCNTestFixture::ExecuteTest()
     pimGCNTest.prepare();
 
     // warmup
-    pimGCNTest.execute_op(true);
+    pimGCNTest.execute_op((PerformanceAnalyser*)this, true);
 
     //avg_kernel_time_ = std::chrono::duration<double>::zero();
     //    Tick();
