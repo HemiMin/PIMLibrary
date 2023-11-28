@@ -69,7 +69,12 @@ int PimGCNTestFixture::ExecuteTest()
     pimGCNTest.prepare();
 
     // warmup
+    avg_kernel_time_ = std::chrono::duration<double>::zero();
+    Tick();
     pimGCNTest.execute_op((PerformanceAnalyser*)this, true);
+    Tock();
+    avg_kernel_time_ += calculate_elapsed_time();
+    calculate_avg_time();
 
     //avg_kernel_time_ = std::chrono::duration<double>::zero();
     //    Tick();

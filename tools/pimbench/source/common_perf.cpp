@@ -37,8 +37,8 @@ std::chrono::duration<double> PerformanceAnalyser::calculate_elapsed_time()
     return time_duration_;
 }
 
-void PerformanceAnalyser::accumulate_kernel_time(std::chrono::duration<double> time)
-{ kernel_execution_time_ += time; }
+void PerformanceAnalyser::accumulate_pim_kernel_time(std::chrono::duration<double> time)
+{ pim_kernel_time_ += time; }
 
 void PerformanceAnalyser::accumulate_align_time(std::chrono::duration<double> time)
 { aligning_time_ += time; }
@@ -53,6 +53,7 @@ void PerformanceAnalyser::print_analytical_data()
     std::cout << "Time analytics: \nPlatform: " << parser_->get_platform() << std::endl;
     std::cout << "Time taken to initialize PIM : " << start_up_time_.count() * 1000 << " ms\n";
     std::cout << "Time taken to align data : " << aligning_time_.count() * 1000 << " ms\n";
+    std::cout << "Time taken to pim execute operation : " << pim_kernel_time_.count() * 1000 << " ms\n";
     std::cout << "Time taken to execute operation : " << kernel_execution_time_.count() * 1000 << " ms\n";
     std::cout << "GFlops : " << gflops_ << " gflops\n";
 }

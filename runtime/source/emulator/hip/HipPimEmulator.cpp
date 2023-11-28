@@ -104,6 +104,7 @@ int HipPimEmulator::execute_gemm_bias_act(PimBo* output, PimBo* pim_data, PimMem
     pim_sim_.preload_data_with_addr(pim_data_addr - pim_base_addr, input_data, pim_data->size);
     pim_sim_.execute_kernel((void*)fmtd32, fmtd32_size);
     pim_sim_.read_result_gemv(sim_output, tmp_data_addr - pim_base_addr, out_dim);
+    std::cout << "sim cycles: " << pim_sim_.get_cycle() << std::endl;
 
     if (is_bias) {
         hipMemcpy(h_bias, bias->data, bias->size, hipMemcpyDeviceToHost);

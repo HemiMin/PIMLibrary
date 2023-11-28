@@ -165,7 +165,7 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
     pa->Tick();
     PimExecuteGemm(aligned_l1_v1, alignedi, aligned_l1_w, nullptr, PimActFunc::NONE, I_X_W);
     pa->Tock();
-    pa->accumulate_kernel_time(pa->calculate_elapsed_time());
+    pa->accumulate_pim_kernel_time(pa->calculate_elapsed_time());
 
     pa->Tick();
     aligned_l1_v1->bshape = {1,1,256,4096};
@@ -176,7 +176,7 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
     pa->Tick();
     PimExecuteGemm(aligned_l1_v2, alignedadj, aligned_l1_v1_2, nullptr, PimActFunc::ACT_RELU, I_X_W);
     pa->Tock();
-    pa->accumulate_kernel_time(pa->calculate_elapsed_time());
+    pa->accumulate_pim_kernel_time(pa->calculate_elapsed_time());
 
     pa->Tick();
     aligned_l1_v2->bshape = {1,1,(uint32_t)params.num_nodes,256};
@@ -189,7 +189,7 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
     pa->Tick();
     PimExecuteGemm(aligned_l2_v1, aligned_l1_v2_2, aligned_l2_w, nullptr, PimActFunc::NONE, I_X_W);
     pa->Tock();
-    pa->accumulate_kernel_time(pa->calculate_elapsed_time());
+    pa->accumulate_pim_kernel_time(pa->calculate_elapsed_time());
 
     pa->Tick();
     aligned_l2_v1->bshape = {1,1,256,4096};
@@ -200,7 +200,7 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
     pa->Tick();
     PimExecuteGemm(aligned_out, alignedadj, aligned_l2_v1_2, nullptr, PimActFunc::NONE, I_X_W);
     pa->Tock();
-    pa->accumulate_kernel_time(pa->calculate_elapsed_time());
+    pa->accumulate_pim_kernel_time(pa->calculate_elapsed_time());
 
     PimCopyMemoryFromAligned(pim_out, aligned_out, DEVICE_TO_DEVICE);
     half_out = PimCreateBo(1, 1, params.num_nodes, params.output_dim, PIM_FP16, MEM_TYPE_HOST);
