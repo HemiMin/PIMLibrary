@@ -13,6 +13,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <iostream>
+#include <time.h>
 #include "executor/PimCompilerDriver.h"
 #include "executor/hip/gpu_custom_ops.h"
 #include "executor/hip/pim_op_kernels.pimk"
@@ -605,6 +606,9 @@ int HipPimExecutor::execute_aligned_gemm_tile_accum(PimBo* output, PimBo* input,
     int device_id;
     hipGetDevice(&device_id);
 
+    double* ticks; 
+    hipMalloc((void**)&ticks, sizeof(double) * blocks * threads_per_block);
+
     void (*gemm_kernel)(volatile uint8_t * __restrict__, volatile uint8_t * __restrict__,
                         volatile uint8_t * __restrict__, volatile uint8_t * __restrict__,
                         volatile uint8_t * __restrict__, volatile uint8_t * __restrict__, int, int, int, int, int, int,
@@ -612,7 +616,7 @@ int HipPimExecutor::execute_aligned_gemm_tile_accum(PimBo* output, PimBo* input,
 #ifdef EMULATOR
                         PimMemTraceData*, int*, int, PimMemTracer*,
 #endif
-                        uint8_t*, int);
+                        uint8_t*, int, double* ticks);
 
     switch (n_in_tile) {
         case 8:
@@ -624,7 +628,7 @@ int HipPimExecutor::execute_aligned_gemm_tile_accum(PimBo* output, PimBo* input,
     }
     PIM_PROFILE_TOCK(PrepareGemmKernel);
 
-    PIM_PROFILE_TICK(RunGemmKernel);
+    PIM_PROFILE_TICK_A(RunGemmKernel);
     hipLaunchKernelGGL(
         gemm_kernel, dim3(blocks), dim3(threads_per_block), 0, (hipStream_t)stream,
         (uint8_t*)(g_pim_base_addr[device_id]), (uint8_t*)input->data, (uint8_t*)weight->data,
@@ -633,15 +637,16 @@ int HipPimExecutor::execute_aligned_gemm_tile_accum(PimBo* output, PimBo* input,
 #ifdef EMULATOR
         (PimMemTraceData*)d_fmtd16_, (int*)d_fmtd16_size_, fmtd_size_per_ch_, (PimMemTracer*)d_emulator_trace_,
 #endif
-        (uint8_t*)crf_bin, crf_size);
+        (uint8_t*)crf_bin, crf_size, ticks);
 #ifndef EMULATOR
     if (block) hipStreamSynchronize((hipStream_t)stream);
-    PIM_PROFILE_TOCK(RunGemmKernel);
+    PIM_PROFILE_TOCK_A(RunGemmKernel);
 #endif
 
 #ifdef EMULATOR
     hipStreamSynchronize((hipStream_t)stream);
-    PIM_PROFILE_TOCK(RunGemmKernel);
+    std::cout << "tick: " << ticks[0] << std::endl;
+    PIM_PROFILE_TOCK_A(RunGemmKernel);
 
     PIM_PROFILE_TICK(RunGemmEmulation);
     hipMemcpy((void*)h_fmtd16_size_, (void*)d_fmtd16_size_, sizeof(int), hipMemcpyDeviceToHost);

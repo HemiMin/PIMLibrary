@@ -460,7 +460,7 @@ __global__ void pim_aligned_gemm_bias_relu_fp16(
 #ifdef EMULATOR
     PimMemTraceData* fmtd16, int* frd_size, int mt_width, PimMemTracer* emulator_trace,
 #endif
-    uint8_t* crf_binary, int crf_size)
+    uint8_t* crf_binary, int crf_size, double* ticks)
 {
 #ifdef EMULATOR
     emulator_trace->g_fba = (uint64_t)pim_ctr;
@@ -470,6 +470,8 @@ __global__ void pim_aligned_gemm_bias_relu_fp16(
     __syncthreads();
 #endif
 
+    int clock_i = hipThreadIdx_x + hipBlockIdx_x * hipBlockDim_x;
+    unsigned long long int start, stop;
 #ifdef PREPARE_KERNEL
     int grf_shift = 3;
     int num_ba = 4;
@@ -488,20 +490,32 @@ __global__ void pim_aligned_gemm_bias_relu_fp16(
 
 #if PARK_IN
     if (hipThreadIdx_x < 32) {
+        start = clock64();
         park_in(pim_ctr, gidx, num_ba, offset);
+        stop = clock64();
+        ticks[clock_i] += (double)(stop-start)/CLOCKS_PER_SEC;
+        //printf("tick parkin(%d):%f\n", clock_i, ticks[clock_i]);
     }
 #endif
 
 #if CHANGE_SB_HAB
     if (hipThreadIdx_x < 2) {
+        start = clock64();
         /* change SB mode to HAB mode */
         change_sb_hab(pim_ctr, offset);
+        stop = clock64();
+        ticks[clock_i] += (double)(stop-start)/CLOCKS_PER_SEC;
+        //printf("tick changesbhab(%d):%f\n", clock_i, ticks[clock_i]);
     }
 #endif
 
 #if PROGRAM_CRF
     if (hipThreadIdx_x < (crf_size >> 4)) {
+        start = clock64();
         program_crf_mod(pim_ctr, gidx, crf_binary, offset);
+        stop = clock64();
+        ticks[clock_i] += (double)(stop-start)/CLOCKS_PER_SEC;
+        //printf("tick crf(%d):%f\n", clock_i, ticks[clock_i]);
     }
 #endif
 
@@ -512,6 +526,7 @@ __global__ void pim_aligned_gemm_bias_relu_fp16(
           // inout_h is height of input which is same to height of output
           for (int in_idx = 0; in_idx < inout_h; in_idx++) {
                 for (int o_idx = 0; o_idx < n_out_tile; o_idx++) {
+                    start = clock64();
                     addr = addr_gen(ch, 0, 0, 0, 0x3fff, 0x0);
                     W_CMD_R(&pim_ctr[addr + offset], gemv_hab_to_hab_pim + offset);
                     R_CMD(&pim_ctr[addr + offset]);
@@ -522,14 +537,18 @@ __global__ void pim_aligned_gemm_bias_relu_fp16(
                     // gemv_nt is inout_h idx
                     uint64_t i_offset = gemv_cnt * (n_in_tile << grf_shift);
                     int r_offset = (o_idx * n_in_tile) >> 1;
+                    stop = clock64();
+                    ticks[clock_i] += (double)(stop-start)/CLOCKS_PER_SEC;
+                    //printf("tick2(%d):%f\n", clock_i, ticks[clock_i]);
 
                     for (int i_idx = 0; i_idx < n_in_tile; i_idx += 2) {
+                        start = clock64();
                         /* write grf_A from WRIO */
                         uint64_t i_addr = (i_offset + ((i_idx << grf_shift) + gidx)) << trans_shift;
                         int irow = (i_offset + ((i_idx << grf_shift) + gidx))/32;
                         int icol = (i_offset + ((i_idx << grf_shift) + gidx))%32;
-                        printf("ch: %d, i_offset: %d, i_idx: %d, gemv_cnt: %d, irow: %d, icol: %d, i_addr: %d, iptr: %p\n",
-                                ch, i_offset, i_idx, gemv_cnt, irow, icol, (i_addr+offset)/32, &input[i_addr +offset]);
+                        //printf("ch: %d, i_offset: %d, i_idx: %d, gemv_cnt: %d, irow: %d, icol: %d, i_addr: %d, iptr: %p\n",
+                        //        ch, i_offset, i_idx, gemv_cnt, irow, icol, (i_addr+offset)/32, &input[i_addr +offset]);
                         addr = addr_gen(ch, 0, 0, 0, 0x3fff, 0x8 + gidx);
                         W_CMD_R(&pim_ctr[addr + offset], &input[i_addr + offset]);
                         R_CMD(&pim_ctr[addr + offset]);
@@ -540,41 +559,41 @@ __global__ void pim_aligned_gemm_bias_relu_fp16(
 
                         addr = addr_gen(ch, 0, 0, 0, even_row, gidx);
                         int w1_addr = addr/32;
-                        printf("w1ptr: %p\n", &weight[addr+offset]);
+                        //printf("w1ptr: %p\n", &weight[addr+offset]);
                         R_CMD(&weight[addr + offset]);
 
                         addr = addr_gen(ch, 0, 0, 0, even_row, gidx + 8);
                         int w2_addr = addr/32;
-                        printf("w2ptr: %p\n", &weight[addr+offset]);
+                        //printf("w2ptr: %p\n", &weight[addr+offset]);
                         R_CMD(&weight[addr + offset]);
 
                         addr = addr_gen(ch, 0, 0, 0, even_row, gidx + 16);
                         int w3_addr = addr/32;
-                        printf("w3ptr: %p\n", &weight[addr+offset]);
+                        //printf("w3ptr: %p\n", &weight[addr+offset]);
                         R_CMD(&weight[addr + offset]);
 
                         addr = addr_gen(ch, 0, 0, 0, even_row, gidx + 24);
                         int w4_addr = addr/32;
-                        printf("w4ptr: %p\n", &weight[addr+offset]);
+                        //printf("w4ptr: %p\n", &weight[addr+offset]);
                         R_CMD(&weight[addr + offset]);
 
                         addr = addr_gen(ch, 0, 0, 0, odd_row, gidx);
-                        printf("w5ptr: %p\n", &weight[addr+offset]);
+                        //printf("w5ptr: %p\n", &weight[addr+offset]);
                         int w5_addr = addr/32;
                         R_CMD(&weight[addr + offset]);
 
                         addr = addr_gen(ch, 0, 0, 0, odd_row, gidx + 8);
-                        printf("w6ptr: %p\n", &weight[addr+offset]);
+                        //printf("w6ptr: %p\n", &weight[addr+offset]);
                         int w6_addr = addr/32;
                         R_CMD(&weight[addr + offset]);
 
                         addr = addr_gen(ch, 0, 0, 0, odd_row, gidx + 16);
-                        printf("w7ptr: %p\n", &weight[addr+offset]);
+                        //printf("w7ptr: %p\n", &weight[addr+offset]);
                         int w7_addr = addr/32;
                         R_CMD(&weight[addr + offset]);
 
                         addr = addr_gen(ch, 0, 0, 0, odd_row, gidx + 24);
-                        printf("w8ptr: %p\n", &weight[addr+offset]);
+                        //printf("w8ptr: %p\n", &weight[addr+offset]);
                         int w8_addr = addr/32;
                         R_CMD(&weight[addr + offset]);
                         B_CMD(1);
@@ -583,14 +602,18 @@ __global__ void pim_aligned_gemm_bias_relu_fp16(
                         //        r_offset, o_idx, even_row, odd_row, gidx, 
                         //        w1_addr, w2_addr, w3_addr, w4_addr, 
                         //        w5_addr, w6_addr, w7_addr, w8_addr);
+                        stop = clock64();
+                        ticks[clock_i] += (double)(stop-start)/CLOCKS_PER_SEC;
+                        //printf("tick3(%d):%f\n", clock_i, ticks[clock_i]);
                     }
 
                     for (int i_idx = 1; i_idx < n_in_tile; i_idx += 2) {
+                        start = clock64();
                         uint64_t i_addr = (i_offset + ((i_idx << grf_shift) + gidx)) << trans_shift;
                         int irow = (i_offset + ((i_idx << grf_shift) + gidx))/32;
                         int icol = (i_offset + ((i_idx << grf_shift) + gidx))%32;
-                        printf("ch: %d, i_offset: %d, i_idx: %d, gemv_cnt: %d, irow: %d, icol: %d, i_addr: %d, ptr: %p\n",
-                                ch, i_offset, i_idx, gemv_cnt, irow, icol, (i_addr+offset)/32, &input[i_addr +offset]);
+                        //printf("ch: %d, i_offset: %d, i_idx: %d, gemv_cnt: %d, irow: %d, icol: %d, i_addr: %d, ptr: %p\n",
+                        //        ch, i_offset, i_idx, gemv_cnt, irow, icol, (i_addr+offset)/32, &input[i_addr +offset]);
                         addr = addr_gen(ch, 0, 0, 1, 0x3fff, 0x8 + gidx);
                         W_CMD_R(&pim_ctr[addr + offset], &input[i_addr + offset]);
                         R_CMD(&pim_ctr[addr + offset]);
@@ -601,42 +624,42 @@ __global__ void pim_aligned_gemm_bias_relu_fp16(
 
                         addr = addr_gen(ch, 0, 0, 1, even_row, gidx);
                         int w1_addr = addr/32;
-                        printf("w1ptr: %p\n", &weight[addr+offset]);
+                        //printf("w1ptr: %p\n", &weight[addr+offset]);
                         R_CMD(&weight[addr + offset]);
 
                         addr = addr_gen(ch, 0, 0, 1, even_row, gidx + 8);
                         int w2_addr = addr/32;
-                        printf("w2ptr: %p\n", &weight[addr+offset]);
+                        //printf("w2ptr: %p\n", &weight[addr+offset]);
                         R_CMD(&weight[addr + offset]);
 
                         addr = addr_gen(ch, 0, 0, 1, even_row, gidx + 16);
                         int w3_addr = addr/32;
-                        printf("w3ptr: %p\n", &weight[addr+offset]);
+                        //printf("w3ptr: %p\n", &weight[addr+offset]);
                         R_CMD(&weight[addr + offset]);
 
                         addr = addr_gen(ch, 0, 0, 1, even_row, gidx + 24);
                         int w4_addr = addr/32;
-                        printf("w4ptr: %p\n", &weight[addr+offset]);
+                        //printf("w4ptr: %p\n", &weight[addr+offset]);
                         R_CMD(&weight[addr + offset]);
 
                         addr = addr_gen(ch, 0, 0, 1, odd_row, gidx);
                         int w5_addr = addr/32;
-                        printf("w5ptr: %p\n", &weight[addr+offset]);
+                        //printf("w5ptr: %p\n", &weight[addr+offset]);
                         R_CMD(&weight[addr + offset]);
 
                         addr = addr_gen(ch, 0, 0, 1, odd_row, gidx + 8);
                         int w6_addr = addr/32;
-                        printf("w6ptr: %p\n", &weight[addr+offset]);
+                        //printf("w6ptr: %p\n", &weight[addr+offset]);
                         R_CMD(&weight[addr + offset]);
 
                         addr = addr_gen(ch, 0, 0, 1, odd_row, gidx + 16);
                         int w7_addr = addr/32;
-                        printf("w7ptr: %p\n", &weight[addr+offset]);
+                        //printf("w7ptr: %p\n", &weight[addr+offset]);
                         R_CMD(&weight[addr + offset]);
 
                         addr = addr_gen(ch, 0, 0, 1, odd_row, gidx + 24);
                         int w8_addr = addr/32;
-                        printf("w8ptr: %p\n", &weight[addr+offset]);
+                        //printf("w8ptr: %p\n", &weight[addr+offset]);
                         R_CMD(&weight[addr + offset]);
                         B_CMD(1);
                         //printf("ch: %d, i_offset: %d, i_idx: %d, irow: %d, icol: %d, i_addr: %d,r_offset: %d, oidx: %d, even_row:%d, odd_row:%d, gidx: %d, w1: %d, w2: %d, w3: %d, w4:%d, w5:%d, w6:%d, w7:%d, w8:%d\n", 
@@ -644,7 +667,11 @@ __global__ void pim_aligned_gemm_bias_relu_fp16(
                         //        r_offset, o_idx, even_row, odd_row, gidx, 
                         //        w1_addr, w2_addr, w3_addr, w4_addr, 
                         //        w5_addr, w6_addr, w7_addr, w8_addr);
+                        stop = clock64();
+                        ticks[clock_i] += (double)(stop-start)/CLOCKS_PER_SEC;
+                        //printf("tick4(%d):%f\n", clock_i, ticks[clock_i]);
                     }
+                    start = clock64();
                     loc = (gemv_cnt * n_out_tile << grf_shift) + (o_idx << grf_shift) + gidx;
                     row = loc >> col_shift;
                     col = loc % num_col;
@@ -652,14 +679,18 @@ __global__ void pim_aligned_gemm_bias_relu_fp16(
                     // pipeline delay
                     // FIX : If alu is in operation, NOP should be added.
                     addr = addr_gen(ch, 0, 0, 1, row, col);
-                    printf("ch: %d, orow: %d, ocol: %d, addr: %d, outptr:%p\n",
-                            ch, row, col, addr/32, &pim_partial_sum[addr+offset]);
+                    //printf("ch: %d, orow: %d, ocol: %d, addr: %d, outptr:%p\n",
+                    //        ch, row, col, addr/32, &pim_partial_sum[addr+offset]);
                     W_CMD(&pim_partial_sum[addr + offset]);
                     W_CMD(&pim_partial_sum[addr + offset]);
                     R_CMD(&pim_partial_sum[addr + offset]);
                     B_CMD(1);
+                    //if (ch==0 && gemv_cnt==39 && gidx==0 && offset==0) printf("out[%d][%d]=%f\n", gemv_cnt, gidx,((float)pim_partial_sum[addr+offset]));
 
                     change_habpim_hab(pim_ctr, offset);
+                    stop = clock64();
+                    ticks[clock_i] += (double)(stop-start)/CLOCKS_PER_SEC;
+                    //printf("tick5(%d):%f\n", clock_i, ticks[clock_i]);
                 }
                 // increment per inout_h idx
                 gemv_cnt++;
@@ -671,16 +702,27 @@ __global__ void pim_aligned_gemm_bias_relu_fp16(
 
 #if CHANGE_HAB_SB
     if (hipThreadIdx_x < 4) {
+        start = clock64();
         /* change HAB mode to SB mode */
         change_hab_sb(pim_ctr, gidx, offset);
+        stop = clock64();
+        ticks[clock_i] += (double)(stop-start)/CLOCKS_PER_SEC;
+        //printf("tick8(%d):%f\n", clock_i, ticks[clock_i]);
     }
 #endif
 
 #if PARK_OUT
     if (hipThreadIdx_x < 32) {
+        start = clock64();
         park_out(pim_ctr, gidx, num_ba, offset);
+        stop = clock64();
+        ticks[clock_i] += (double)(stop-start)/CLOCKS_PER_SEC;
+        //printf("tick9(%d):%f\n", clock_i, ticks[clock_i]);
     }
 #endif
+    //unsigned long long int stop = clock64();
+    //ticks[clock_i] = (double)(stop-start)/CLOCKS_PER_SEC;
+    //printf("tick(%d):%f\n", clock_i, ticks[clock_i]);
 
 #ifdef EMULATOR
     if (hipBlockIdx_x == 0 && hipThreadIdx_x == 0) {
@@ -735,7 +777,7 @@ __global__ void pim_aligned_gemm_bias_relu_8tile_fp16(
 #ifdef EMULATOR
     PimMemTraceData* fmtd16, int* frd_size, int mt_width, PimMemTracer* emulator_trace,
 #endif
-    uint8_t* crf_binary, int crf_size)
+    uint8_t* crf_binary, int crf_size, double* ticks)
 {
 #ifdef EMULATOR
     emulator_trace->g_fba = (uint64_t)pim_ctr;
@@ -745,6 +787,8 @@ __global__ void pim_aligned_gemm_bias_relu_8tile_fp16(
     __syncthreads();
 #endif
 
+    int clock_i = hipThreadIdx_x + hipBlockIdx_x * hipBlockDim_x;
+    clock_t start = clock64();
 #ifdef PREPARE_KERNEL
     int grf_shift = 3;
     int num_ba = 4;
@@ -907,6 +951,8 @@ __global__ void pim_aligned_gemm_bias_relu_8tile_fp16(
         frd_size[0] = emulator_trace->g_ridx[0];
     }
 #endif
+    clock_t stop = clock64();
+    ticks[clock_i] = (double)(stop-start)/CLOCKS_PER_SEC;
 
 #if REDUCE_SUM
     int bg = hipThreadIdx_x >> 4;
