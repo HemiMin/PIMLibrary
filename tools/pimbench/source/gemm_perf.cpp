@@ -61,8 +61,8 @@ PimGemmTest::PimGemmTest(unsigned n, unsigned c, unsigned in_h, unsigned in_w, u
     d_o_ = PimCreateBo(desc_, MEM_TYPE_DEVICE, GEMM_OUTPUT);
     PIM_PROFILE_TOCK_A(PimAllocD1);
     pa_->Tock();
-    std::chrono::duration<double> allocD_time = pa->calculate_elapsed_time();
-    pa->accumulate_allocD_time(allocD_time);
+    std::chrono::duration<double> allocD_time = pa_->calculate_elapsed_time();
+    pa_->accumulate_allocD_time(allocD_time);
     std::cout << "allocD time1: " << allocD_time.count() * 1000 << std::endl << std::endl;
 
     if (has_bias_) d_b_ = PimCreateBo(desc_, MEM_TYPE_DEVICE, GEMM_BIAS);
@@ -72,16 +72,33 @@ PimGemmTest::PimGemmTest(unsigned n, unsigned c, unsigned in_h, unsigned in_w, u
 
 PimGemmTest::~PimGemmTest()
 {
+    pa_->Tick();
+    PIM_PROFILE_TICK_A(PimDeallocH);
     PimDestroyBo(h_i_);
     PimDestroyBo(h_w_);
-    if (has_bias_) PimDestroyBo(h_b_);
     PimDestroyBo(h_o_);
-    PimDestroyBo(golden_);
+    PIM_PROFILE_TOCK_A(PimDeallocH);
+    pa_->Tock();
+    std::chrono::duration<double> deallocH_time = pa_->calculate_elapsed_time();
+    pa_->accumulate_allocD_time(deallocH_time);
+    std::cout << "deallocH time: " << deallocH_time.count() * 1000 << std::endl << std::endl;
+    if (has_bias_) PimDestroyBo(h_b_);
+
+    pa_->Tick();
+    PIM_PROFILE_TICK_A(PimDeallocD);
     PimDestroyBo(d_i_);
     PimDestroyBo(d_w_);
-    if (has_bias_) PimDestroyBo(d_b_);
     PimDestroyBo(d_o_);
+    PIM_PROFILE_TOCK_A(PimDeallocD);
+    pa_->Tock();
+    std::chrono::duration<double> deallocD_time = pa_->calculate_elapsed_time();
+    pa_->accumulate_allocD_time(deallocD_time);
+    std::cout << "deallocD time: " << deallocD_time.count() * 1000 << std::endl << std::endl;
+
     PimDestroyGemmDesc(desc_);
+    if (has_bias_) PimDestroyBo(d_b_);
+
+    PimDestroyBo(golden_);
 }
 
 void PimGemmTest::prepare(float alpha, float beta, float variation)

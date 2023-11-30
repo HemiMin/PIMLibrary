@@ -33,6 +33,8 @@ class PerformanceAnalyser
     void accumulate_align_time(std::chrono::duration<double> time);
     void accumulate_allocH_time(std::chrono::duration<double> time);
     void accumulate_allocD_time(std::chrono::duration<double> time);
+    void accumulate_deallocH_time(std::chrono::duration<double> time);
+    void accumulate_deallocD_time(std::chrono::duration<double> time);
     void accumulate_copyH2D_time(std::chrono::duration<double> time);
     void accumulate_copyD2H_time(std::chrono::duration<double> time);
     void accumulate_total_time(std::chrono::duration<double> time);
@@ -64,6 +66,8 @@ class PerformanceAnalyser
     std::chrono::duration<double> allocD_time_ = std::chrono::duration<double>::zero();
     std::chrono::duration<double> copyH2D_time_ = std::chrono::duration<double>::zero();
     std::chrono::duration<double> copyD2H_time_ = std::chrono::duration<double>::zero();
+    std::chrono::duration<double> deallocH_time_ = std::chrono::duration<double>::zero();
+    std::chrono::duration<double> deallocD_time_ = std::chrono::duration<double>::zero();
     std::chrono::time_point<std::chrono::high_resolution_clock> start_, end_;
 };
 

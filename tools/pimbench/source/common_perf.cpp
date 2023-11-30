@@ -52,6 +52,12 @@ void PerformanceAnalyser::accumulate_allocH_time(std::chrono::duration<double> t
 void PerformanceAnalyser::accumulate_allocD_time(std::chrono::duration<double> time)
 { allocD_time_ += time; }
 
+void PerformanceAnalyser::accumulate_deallocH_time(std::chrono::duration<double> time)
+{ deallocH_time_ += time; }
+
+void PerformanceAnalyser::accumulate_deallocD_time(std::chrono::duration<double> time)
+{ deallocD_time_ += time; }
+
 void PerformanceAnalyser::accumulate_copyH2D_time(std::chrono::duration<double> time)
 { copyH2D_time_ += time; }
 

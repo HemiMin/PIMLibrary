@@ -294,6 +294,44 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
     output = &variables.back();
     h2f(output->data, (half_float::half*)half_out->data, output_size);
 
+    pa->Tick();
+    PIM_PROFILE_TICK_A(PimDeallocH1);
+    PimDestroyBo(half_input);
+    PimDestroyBo(half_adj_mat);
+    PimDestroyBo(half_l1_weight);
+    PimDestroyBo(half_l2_weight);
+    PimDestroyBo(half_out);
+    PIM_PROFILE_TOCK_A(PimDeallocH1);
+    pa->Tock();
+    std::chrono::duration<double> deallocH_time = pa->calculate_elapsed_time();
+    pa->accumulate_deallocH_time(deallocH_time);
+    std::cout << "deallocH time1: " << deallocH_time.count() * 1000 << std::endl << std::endl;
+
+    pa->Tick();
+    PIM_PROFILE_TICK_A(PimDeallocD1);
+    PimDestroyBo(pim_input);
+    PimDestroyBo(pim_adj_mat);
+    PimDestroyBo(pim_l1_weight);
+    PimDestroyBo(pim_l2_weight);
+    PimDestroyBo(pim_l1_var1);
+    PimDestroyBo(pim_l1_var2);
+    PimDestroyBo(pim_l2_var1);
+    PimDestroyBo(pim_out);
+    PimDestroyBo(alignedi);
+    PimDestroyBo(alignedadj);
+    PimDestroyBo(aligned_l1_w);
+    PimDestroyBo(aligned_l2_w);
+    PimDestroyBo(aligned_l1_v1);
+    PimDestroyBo(aligned_l1_v2);
+    PimDestroyBo(aligned_l1_v1_2);
+    PimDestroyBo(aligned_l1_v2_2);
+    PimDestroyBo(aligned_l2_v1_2);
+    PIM_PROFILE_TOCK_A(PimDeallocD1);
+    pa->Tock();
+    std::chrono::duration<double> deallocD_time = pa->calculate_elapsed_time();
+    pa->accumulate_deallocD_time(deallocD_time);
+    std::cout << "deallocD time1: " << deallocD_time.count() * 1000 << std::endl << std::endl;
+
     // cross entropy loss
     CUDA_CHECK(hipMalloc((void**) &truth, params.num_nodes * sizeof(int)));
     modules.push_back(new CUDACrossEntropyLoss(output, truth, &loss, params.output_dim));

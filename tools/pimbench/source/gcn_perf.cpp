@@ -98,6 +98,8 @@ int PimGCNTestFixture::ExecuteTest()
     std::cout << "Time taken to copyH2D_time_ PIM : " << (copyH2D_time_/(double)(num_iter_)).count() * 1000 << " ms\n";
     std::cout << "Time taken to copyD2H_time_ PIM : " << (copyD2H_time_/(double)(num_iter_)).count() * 1000 << " ms\n";
     std::cout << "Time taken to pim execute operation : " << (pim_kernel_time_/(double)(num_iter_)).count() * 1000 << " ms\n";
+    std::cout << "Time taken to deallocH PIM : " << (deallocH_time_/(double)(num_iter_)).count() * 1000 << " ms\n";
+    std::cout << "Time taken to deallocD PIM : " << (deallocD_time_/(double)(num_iter_)).count() * 1000 << " ms\n";
     std::cout << "Time taken to execute operation : " << kernel_execution_time_.count() * 1000 << " ms\n\n";
 
 
