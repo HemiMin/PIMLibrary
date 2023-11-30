@@ -1,0 +1,123 @@
+Initialize time (ms) : 184.247
+Run on PIM
+align
+ReorderWeight time (ms) : 79.6401
+input hxw: 1x256, n_in_tile: 2,n_out_tile: 1, iter_cnt: 1
+PrepareGemmKernel time (ms) : 0.069175
+RunGemmKernel time (ms) : 4.95184
+sim cycles: 3961
+RunGemmEmulation time (ms) : 1407.01
+ExecuteGemm time (ms) : 1491.72
+=======WarmUp end========
+Parse Graph Succeeded.
+Parse Node Succeeded.
+Parse Split Succeeded.
+RUNNING ON GPU(HIP)
+
+PimAllocH1 time (ms) : 0.318581
+allocH time1: 0.321878
+
+PimAllocD1 time (ms) : 0.029687
+allocD time1: 0.03051
+
+PimCopyH2D1 time (ms) : 0.120145
+copyH2D time1: 0.120926
+
+PimAllocD2 time (ms) : 0.028806
+allocD time2: 0.028696
+
+PimAlign1 time (ms) : 16.8294
+align time1: 16.8328
+
+Run on PIM
+align
+ReorderWeight time (ms) : 1165.17
+input hxw: 40x1536, n_in_tile: 12,n_out_tile: 1, iter_cnt: 1
+PrepareGemmKernel time (ms) : 0.180672
+RunGemmKernel time (ms) : 529.797
+sim cycles: 248789
+RunGemmEmulation time (ms) : 54515.1
+ExecuteGemm time (ms) : 56210.3
+PimExecuteGemm1 time (ms) : 56210.3
+pimExecuteGemm time1: 56210.3
+
+PimAlign2 time (ms) : 0.996565
+align time2: 0.997908
+Run on PIM
+align
+ReorderWeight time (ms) : 231.666
+input hxw: 40x256, n_in_tile: 2,n_out_tile: 1, iter_cnt: 1
+PrepareGemmKernel time (ms) : 0.004659
+RunGemmKernel time (ms) : 117.863
+sim cycles: 301459
+RunGemmEmulation time (ms) : 10559.1
+ExecuteGemm time (ms) : 10908.7
+PimExecuteGemm2 time (ms) : 10908.7
+pimExecuteGemm time2: 10908.7
+
+PimAlign3 time (ms) : 2.10418
+align time3: 2.10566
+
+Run on PIM
+align
+ReorderWeight time (ms) : 234.378
+input hxw: 40x256, n_in_tile: 2,n_out_tile: 1, iter_cnt: 1
+PrepareGemmKernel time (ms) : 0.004989
+RunGemmKernel time (ms) : 117.834
+sim cycles: 354282
+RunGemmEmulation time (ms) : 10853.8
+ExecuteGemm time (ms) : 11206.1
+PimExecuteGemm3 time (ms) : 11206.1
+pimExecuteGemm time3: 11206.1
+
+PimAlign4 time (ms) : 0.955033
+align time4: 0.956266
+
+Run on PIM
+align
+ReorderWeight time (ms) : 238.291
+input hxw: 40x256, n_in_tile: 2,n_out_tile: 1, iter_cnt: 1
+PrepareGemmKernel time (ms) : 0.010801
+RunGemmKernel time (ms) : 117.726
+sim cycles: 406405
+RunGemmEmulation time (ms) : 10353.4
+ExecuteGemm time (ms) : 10710.3
+PimExecuteGemm4 time (ms) : 10710.3
+pimExecuteGemm time4: 10710.3
+
+PimCopyAlignedData time (ms) : 1.09637
+copy aligned out to origin out: 1.09739
+
+PimCopyD2H time (ms) : 0.045679
+copyD2H time1: 0.046661
+
+PimDeallocH1 time (ms) : 0.158429
+deallocH time1: 0.159731
+
+PimDeallocD1 time (ms) : 0.156605
+deallocD time1: 0.157638
+
+TotalTime time (ms) : 89199.8
+===========GCN Time===============
+Time taken to initialize PIM : 184.238 ms
+Time taken to allocH PIM : 0.321878 ms
+Time taken to allocD PIM : 0.059206 ms
+Time taken to align data : 21.99 ms
+Time taken to copyH2D_time_ PIM : 0.120926 ms
+Time taken to copyD2H_time_ PIM : 0.046661 ms
+Time taken to pim execute operation : 89035.4 ms
+Time taken to deallocH PIM : 0.159731 ms
+Time taken to deallocD PIM : 0.157638 ms
+Time taken to execute operation : 89199.8 ms
+
+Time analytics: 
+Platform: hip
+Time taken to initialize PIM : 184.238 ms
+Time taken to allocH PIM : 0.321878 ms
+Time taken to allocD PIM : 0.059206 ms
+Time taken to align data : 21.99 ms
+Time taken to copyH2D_time_ PIM : 0.120926 ms
+Time taken to copyD2H_time_ PIM : 0.046661 ms
+Time taken to pim execute operation : 89035.4 ms
+Time taken to execute operation : 89199.8 ms
+GFlops : 0 gflops
