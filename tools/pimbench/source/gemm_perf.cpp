@@ -8,12 +8,13 @@
  * to third parties without the express written permission of Samsung Electronics.
  */
 #include "gemm_perf.h"
+#include "utility/pim_profile.h"
 
 using half_float::half;
 using namespace std;
 
 PimGemmTest::PimGemmTest(unsigned n, unsigned c, unsigned in_h, unsigned in_w, unsigned out_h, unsigned out_w,
-                         PimActFunc act, bool has_bias, PimGemmOrder gemm_order)
+                         PimActFunc act, bool has_bias, PimGemmOrder gemm_order, PerformanceAnalyser* pa)
     : n_(n),
       c_(c),
       in_h_(in_h),
@@ -22,7 +23,7 @@ PimGemmTest::PimGemmTest(unsigned n, unsigned c, unsigned in_h, unsigned in_w, u
       out_w_(out_w),
       act_(act),
       has_bias_(has_bias),
-      gemm_order_(gemm_order)
+      gemm_order_(gemm_order), pa_(pa)
 {
     if (!is_support_activation(act_)) {
         throw invalid_argument("Invalid activation type");
@@ -40,15 +41,32 @@ PimGemmTest::PimGemmTest(unsigned n, unsigned c, unsigned in_h, unsigned in_w, u
     }
 
     desc_ = PimCreateGemmDesc(n_, c_, in_h_, in_w_, out_h_, out_w_, PIM_FP16, gemm_order);
+
+    pa_->Tick();
+    PIM_PROFILE_TICK_A(PimAllocH1);
     h_i_ = PimCreateBo(desc_, MEM_TYPE_HOST, GEMM_INPUT);
     h_w_ = PimCreateBo(desc_, MEM_TYPE_HOST, GEMM_WEIGHT);
-    if (has_bias_) h_b_ = PimCreateBo(desc_, MEM_TYPE_HOST, GEMM_BIAS);
     h_o_ = PimCreateBo(desc_, MEM_TYPE_HOST, GEMM_OUTPUT);
+    PIM_PROFILE_TOCK_A(PimAllocH1);
+    pa_->Tock();
+    std::chrono::duration<double> allocH_time = pa->calculate_elapsed_time();
+    pa->accumulate_allocH_time(allocH_time);
+    std::cout << "allocH time1: " << allocH_time.count() * 1000 << std::endl << std::endl;
+
+    if (has_bias_) h_b_ = PimCreateBo(desc_, MEM_TYPE_HOST, GEMM_BIAS);
+    pa_->Tick();
+    PIM_PROFILE_TICK_A(PimAllocD1);
     d_i_ = PimCreateBo(desc_, MEM_TYPE_DEVICE, GEMM_INPUT);
     d_w_ = PimCreateBo(desc_, MEM_TYPE_DEVICE, GEMM_WEIGHT);
+    d_o_ = PimCreateBo(desc_, MEM_TYPE_DEVICE, GEMM_OUTPUT);
+    PIM_PROFILE_TOCK_A(PimAllocD1);
+    pa_->Tock();
+    std::chrono::duration<double> allocD_time = pa->calculate_elapsed_time();
+    pa->accumulate_allocD_time(allocD_time);
+    std::cout << "allocD time1: " << allocD_time.count() * 1000 << std::endl << std::endl;
+
     if (has_bias_) d_b_ = PimCreateBo(desc_, MEM_TYPE_DEVICE, GEMM_BIAS);
 
-    d_o_ = PimCreateBo(desc_, MEM_TYPE_DEVICE, GEMM_OUTPUT);
     golden_ = PimCreateBo(desc_, MEM_TYPE_HOST, GEMM_OUTPUT);
 }
 
@@ -99,8 +117,17 @@ void PimGemmTest::prepare(float alpha, float beta, float variation)
     if (act_ == ACT_RELU) {
         reluCPU((half*)golden_->data, out_size_);
     }
+    pa_->Tick();
+    PIM_PROFILE_TICK_A(PimCopyH2D1);
     PimCopyMemory(d_i_, h_i_, HOST_TO_DEVICE);
     PimCopyMemory(d_w_, h_w_, HOST_TO_DEVICE);
+    PIM_PROFILE_TOCK_A(PimCopyH2D1);
+    pa_->Tock();
+
+    std::chrono::duration<double> copyH2D_time = pa_->calculate_elapsed_time();
+    pa_->accumulate_copyH2D_time(copyH2D_time);
+    std::cout << "copyH2D time1: " << copyH2D_time.count() * 1000 << std::endl << std::endl;
+
     PimCopyMemory(d_o_, h_o_, HOST_TO_DEVICE);
 
     if (has_bias_) {
@@ -113,10 +140,23 @@ void PimGemmTest::prepare(float alpha, float beta, float variation)
 void PimGemmTest::execute_op(bool block)
 {
     (void)PimExecuteGemm(d_o_, d_i_, d_w_, d_b_, act_, gemm_order_, nullptr, block);
-    if (!block) PimSynchronize();
+    if (!block) {
+      std::cout << "block" << std::endl;
+      PimSynchronize();
+    }
 }
 
-void PimGemmTest::finalize() { PimCopyMemory(h_o_, d_o_, DEVICE_TO_HOST); }
+void PimGemmTest::finalize() 
+{ 
+  pa_->Tick();
+  PIM_PROFILE_TICK_A(PimCopyD2H);
+  PimCopyMemory(h_o_, d_o_, DEVICE_TO_HOST); 
+  PIM_PROFILE_TOCK_A(PimCopyD2H);
+  pa_->Tock();
+  std::chrono::duration<double> copyD2H_time = pa_->calculate_elapsed_time();
+  std::cout << "copyD2H time: " << copyD2H_time.count()*1000 << std::endl;
+  pa_->accumulate_copyD2H_time(copyD2H_time);
+}
 void PimGemmTest::run_with_explicit_reordering(bool use_device_weight, bool block, unsigned niter)
 {
     auto* w_to_reorder = use_device_weight ? d_w_ : h_w_;
@@ -143,22 +183,41 @@ int PimGemmTestFixture::ExecuteTest()
 {
     act = (parser_->get_act_function() == "relu") ? ACT_RELU : NONE;
     has_bias = (parser_->get_has_bias()) ? true : false;
+    auto start = std::chrono::high_resolution_clock::now();
     PimGemmTest pimGemmTest = PimGemmTest(num_batch_, num_channels_, input_height_, input_width_, output_height_,
-                                          output_width_, act, has_bias, order_);
+                                          output_width_, act, has_bias, order_, (PerformanceAnalyser*)this);
     pimGemmTest.prepare();
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> total_time = end - start;
+    accumulate_total_time(total_time);
 
     // warmup
     pimGemmTest.execute_op(true);
+    std::cout << "=======WarmUp end========" << std::endl;
 
-    avg_kernel_time_ = std::chrono::duration<double>::zero();
     for (int i = 0; i < num_iter_; i++) {
+        //Tick();
         Tick();
+        PIM_PROFILE_TICK_A(PimExecuteGemm);
         pimGemmTest.execute_op(block_);
+        PIM_PROFILE_TOCK_A(PimExecuteGemm);
         Tock();
-        avg_kernel_time_ += calculate_elapsed_time();
+        std::chrono::duration<double> pim_time = calculate_elapsed_time();
+        accumulate_pim_kernel_time(pim_time);
+        std::cout << "pimExecuteGemm time: " << pim_time.count() * 1000 << std::endl << std::endl;
+        //Tock();
+        //avg_kernel_time_ += calculate_elapsed_time();
     }
+
+    start = std::chrono::high_resolution_clock::now();
     pimGemmTest.finalize();
-    calculate_avg_time();
+    end = std::chrono::high_resolution_clock::now();
+    total_time = end - start;
+    accumulate_total_time(total_time);
+    accumulate_total_time(pim_kernel_time_/(double)num_iter_);
+
+    kernel_execution_time_ = avg_kernel_time_;
+    //calculate_avg_time();
     calculate_gflops(pimGemmTest.get_flt_ops());
     return pimGemmTest.validate();
 }
@@ -167,7 +226,7 @@ int PimGemmTestFixture::ExecuteTestExplicitReordering()
 {
     bool use_device_weight = false;
     PimGemmTest pimGemmTest = PimGemmTest(num_batch_, num_channels_, input_height_, input_width_, output_height_,
-                                          output_width_, act, has_bias, order_);
+                                          output_width_, act, has_bias, order_, (PerformanceAnalyser*)this);
     pimGemmTest.prepare();
     pimGemmTest.run_with_explicit_reordering(use_device_weight, block_);
 

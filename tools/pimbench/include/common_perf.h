@@ -31,6 +31,11 @@ class PerformanceAnalyser
     std::chrono::duration<double> calculate_elapsed_time();
     void accumulate_pim_kernel_time(std::chrono::duration<double> time);
     void accumulate_align_time(std::chrono::duration<double> time);
+    void accumulate_allocH_time(std::chrono::duration<double> time);
+    void accumulate_allocD_time(std::chrono::duration<double> time);
+    void accumulate_copyH2D_time(std::chrono::duration<double> time);
+    void accumulate_copyD2H_time(std::chrono::duration<double> time);
+    void accumulate_total_time(std::chrono::duration<double> time);
     void calculate_avg_time();
 
    protected:
@@ -55,6 +60,10 @@ class PerformanceAnalyser
     std::chrono::duration<double> kernel_execution_time_;
     std::chrono::duration<double> aligning_time_ = std::chrono::duration<double>::zero();
     std::chrono::duration<double> pim_kernel_time_ = std::chrono::duration<double>::zero();
+    std::chrono::duration<double> allocH_time_ = std::chrono::duration<double>::zero();
+    std::chrono::duration<double> allocD_time_ = std::chrono::duration<double>::zero();
+    std::chrono::duration<double> copyH2D_time_ = std::chrono::duration<double>::zero();
+    std::chrono::duration<double> copyD2H_time_ = std::chrono::duration<double>::zero();
     std::chrono::time_point<std::chrono::high_resolution_clock> start_, end_;
 };
 

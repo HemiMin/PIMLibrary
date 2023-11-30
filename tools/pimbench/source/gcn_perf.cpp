@@ -8,12 +8,15 @@
  * to third parties without the express written permission of Samsung Electronics.
  */
 #include "gcn_perf.h"
+#include <chrono>
 #include "module.h"
 #include "optim.h"
 #include "variable.h"
 #include "parser.h"
 #include "hip_gcn.h"
 #include "gcn_parser.h"
+#include "pim_runtime_api.h"
+#include "utility/pim_profile.h"
 
 using half_float::half;
 using namespace std;
@@ -69,12 +72,34 @@ int PimGCNTestFixture::ExecuteTest()
     pimGCNTest.prepare();
 
     // warmup
+    PimBo* wu_i = PimCreateBo(1,1,1,256, PIM_FP16, MEM_TYPE_DEVICE);
+    PimBo* wu_w = PimCreateBo(1,1,256,4096, PIM_FP16, MEM_TYPE_DEVICE);
+    PimBo* wu_o = PimCreateBo(1,1,1,4096, PIM_FP16, MEM_TYPE_DEVICE);
+    (void)PimExecuteGemm(wu_o, wu_i, wu_w, nullptr, PimActFunc::NONE, I_X_W, nullptr);
+    std::cout << "=======WarmUp end========" << std::endl;
+
     avg_kernel_time_ = std::chrono::duration<double>::zero();
-    Tick();
-    pimGCNTest.execute_op((PerformanceAnalyser*)this, true);
-    Tock();
-    avg_kernel_time_ += calculate_elapsed_time();
+    for (int i = 0; i < num_iter_; i++) {
+      auto start = std::chrono::high_resolution_clock::now();
+      PIM_PROFILE_TICK_A(TotalTime);
+      pimGCNTest.execute_op((PerformanceAnalyser*)this, true);
+      PIM_PROFILE_TOCK_A(TotalTime);
+      auto end = std::chrono::high_resolution_clock::now();
+      std::chrono::duration<double> total_time = end - start;
+      accumulate_total_time(total_time);
+    }
     calculate_avg_time();
+
+    std::cout << "===========GCN Time===============" << std::endl;
+    std::cout << "Time taken to initialize PIM : " << start_up_time_.count() * 1000 << " ms\n";
+    std::cout << "Time taken to allocH PIM : " << (allocH_time_/(double)(num_iter_)).count() * 1000 << " ms\n";
+    std::cout << "Time taken to allocD PIM : " << (allocD_time_/(double)(num_iter_)).count() * 1000 << " ms\n";
+    std::cout << "Time taken to align data : " << (aligning_time_/(double)(num_iter_)).count() * 1000 << " ms\n";
+    std::cout << "Time taken to copyH2D_time_ PIM : " << (copyH2D_time_/(double)(num_iter_)).count() * 1000 << " ms\n";
+    std::cout << "Time taken to copyD2H_time_ PIM : " << (copyD2H_time_/(double)(num_iter_)).count() * 1000 << " ms\n";
+    std::cout << "Time taken to pim execute operation : " << (pim_kernel_time_/(double)(num_iter_)).count() * 1000 << " ms\n";
+    std::cout << "Time taken to execute operation : " << kernel_execution_time_.count() * 1000 << " ms\n\n";
+
 
     //avg_kernel_time_ = std::chrono::duration<double>::zero();
     //    Tick();

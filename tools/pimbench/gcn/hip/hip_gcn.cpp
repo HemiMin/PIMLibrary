@@ -2,8 +2,10 @@
 #include "half.hpp"
 #include "pim_data_types.h"
 #include "pim_runtime_api.h"
+#include "utility/pim_profile.h"
 #include "timer.h"
 #include <algorithm>
+#include <chrono>
 #include <thrust/transform.h>
 
 using std::max;
@@ -117,16 +119,28 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
                          l2_weight_size*sizeof(float), hipMemcpyDeviceToHost));
 
     // convert float to half
+
+    std::cout << std::endl;
+    pa->Tick();
+    PIM_PROFILE_TICK_A(PimAllocH1);
     half_input = PimCreateBo(1, 1, params.num_nodes, params.input_dim, PIM_FP16, MEM_TYPE_HOST);
     half_adj_mat = PimCreateBo(1, 1, params.num_nodes, params.num_nodes, PIM_FP16, MEM_TYPE_HOST);
     half_l1_weight = PimCreateBo(1, 1, params.input_dim, params.hidden_dim, PIM_FP16, MEM_TYPE_HOST);
     half_l2_weight = PimCreateBo(1, 1, params.hidden_dim, params.output_dim, PIM_FP16, MEM_TYPE_HOST);
+    half_out = PimCreateBo(1, 1, params.num_nodes, params.output_dim, PIM_FP16, MEM_TYPE_HOST);
+    PIM_PROFILE_TOCK_A(PimAllocH1);
+    pa->Tock();
+    std::chrono::duration<double> allocH_time = pa->calculate_elapsed_time();
+    pa->accumulate_allocH_time(allocH_time);
+    std::cout << "allocH time1: " << allocH_time.count() * 1000 << std::endl << std::endl;
 
     f2h((half_float::half*)half_input->data, host_input.data(), input_size);
     f2h((half_float::half*)half_l1_weight->data, host_l1_weight.data(), l1_weight_size);
     f2h((half_float::half*)half_adj_mat->data, host_adj_mat.data(), adj_size);
     f2h((half_float::half*)half_l2_weight->data, host_l2_weight.data(), l2_weight_size);
 
+    pa->Tick();
+    PIM_PROFILE_TICK_A(PimAllocD1);
     pim_input = PimCreateBo(1, 1, params.num_nodes, params.input_dim, PIM_FP16, MEM_TYPE_DEVICE);
     pim_input->bshape = {1,1,(uint32_t)params.num_nodes,6*256};
     pim_adj_mat = PimCreateBo(1, 1, params.num_nodes, params.num_nodes, PIM_FP16, MEM_TYPE_DEVICE);
@@ -135,12 +149,26 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
     pim_l1_weight->bshape = {1,1,6*256,4096};
     pim_l2_weight = PimCreateBo(1, 1, params.hidden_dim, params.output_dim, PIM_FP16, MEM_TYPE_DEVICE);
     pim_l2_weight->bshape = {1,1,256,4096};
+    PIM_PROFILE_TOCK_A(PimAllocD1);
+    pa->Tock();
+    std::chrono::duration<double> allocD_time = pa->calculate_elapsed_time();
+    pa->accumulate_allocD_time(allocD_time);
+    std::cout << "allocD time1: " << allocD_time.count() * 1000 << std::endl << std::endl;
 
+    pa->Tick();
+    PIM_PROFILE_TICK_A(PimCopyH2D1);
     PimCopyMemory(pim_input, half_input, HOST_TO_DEVICE);
     PimCopyMemory(pim_adj_mat, half_adj_mat, HOST_TO_DEVICE);
     PimCopyMemory(pim_l1_weight, half_l1_weight, HOST_TO_DEVICE);
     PimCopyMemory(pim_l2_weight, half_l2_weight, HOST_TO_DEVICE);
+    PIM_PROFILE_TOCK_A(PimCopyH2D1);
+    pa->Tock();
+    std::chrono::duration<double> copyH2D_time = pa->calculate_elapsed_time();
+    pa->accumulate_copyH2D_time(copyH2D_time);
+    std::cout << "copyH2D time1: " << copyH2D_time.count() * 1000 << std::endl << std::endl;
 
+    pa->Tick();
+    PIM_PROFILE_TICK_A(PimAllocD2);
     pim_l1_var1 = PimCreateBo(1, 1, (uint32_t)params.num_nodes, params.hidden_dim, PIM_FP16, MEM_TYPE_DEVICE);
     pim_l1_var1->bshape = {1,1,(uint32_t)params.num_nodes,4096};
     pim_l1_var2 = PimCreateBo(1, 1, params.num_nodes, params.hidden_dim, PIM_FP16, MEM_TYPE_DEVICE);
@@ -149,9 +177,15 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
     pim_l2_var1->bshape = {1,1,(uint32_t)params.num_nodes,4096};
     pim_out = PimCreateBo(1, 1, params.num_nodes, params.output_dim, PIM_FP16, MEM_TYPE_DEVICE);
     pim_out->bshape = {1,1,(uint32_t)params.num_nodes,4096};
+    pa->Tock();
+    PIM_PROFILE_TOCK_A(PimAllocD2);
+    allocD_time = pa->calculate_elapsed_time();
+    pa->accumulate_allocD_time(allocD_time);
+    std::cout << "allocD time2: " << allocD_time.count() * 1000 << std::endl << std::endl;
 
 
     pa->Tick();
+    PIM_PROFILE_TICK_A(PimAlign1);
     PimBo* alignedi = PimCreateAlignedBo(pim_input);
     PimBo* alignedadj = PimCreateAlignedBo(pim_adj_mat);
     PimBo* aligned_l1_w = PimCreateAlignedBo(pim_l1_weight);
@@ -159,52 +193,101 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
 
     PimBo* aligned_l1_v1 = PimCreateAlignedBo(pim_l1_var1);
     PimBo* aligned_l1_v2 = PimCreateAlignedBo(pim_l1_var2);
+    PIM_PROFILE_TOCK_A(PimAlign1);
     pa->Tock();
-    pa->accumulate_align_time(pa->calculate_elapsed_time());
+    std::chrono::duration<double> align_time = pa->calculate_elapsed_time();
+    pa->accumulate_align_time(align_time);
+    std::cout << "align time1: " << align_time.count() * 1000 << std::endl << std::endl;
     
     pa->Tick();
+    PIM_PROFILE_TICK_A(PimExecuteGemm1);
     PimExecuteGemm(aligned_l1_v1, alignedi, aligned_l1_w, nullptr, PimActFunc::NONE, I_X_W);
+    PimSynchronize();
+    PIM_PROFILE_TOCK_A(PimExecuteGemm1);
     pa->Tock();
-    pa->accumulate_pim_kernel_time(pa->calculate_elapsed_time());
+    std::chrono::duration<double> pim_time = pa->calculate_elapsed_time();
+    pa->accumulate_pim_kernel_time(pim_time);
+    std::cout << "pimExecuteGemm time1: " << pim_time.count() * 1000 << std::endl << std::endl;
 
     pa->Tick();
+    PIM_PROFILE_TICK_A(PimAlign2);
     aligned_l1_v1->bshape = {1,1,256,4096};
     PimBo* aligned_l1_v1_2 = PimCreateAlignedBo(aligned_l1_v1);
+    PIM_PROFILE_TOCK_A(PimAlign2);
     pa->Tock();
-    pa->accumulate_align_time(pa->calculate_elapsed_time());
+    align_time = pa->calculate_elapsed_time();
+    pa->accumulate_align_time(align_time);
+    std::cout << "align time2: " << align_time.count() * 1000 << std::endl;
 
     pa->Tick();
+    PIM_PROFILE_TICK_A(PimExecuteGemm2);
     PimExecuteGemm(aligned_l1_v2, alignedadj, aligned_l1_v1_2, nullptr, PimActFunc::ACT_RELU, I_X_W);
+    PimSynchronize();
+    PIM_PROFILE_TOCK_A(PimExecuteGemm2);
     pa->Tock();
-    pa->accumulate_pim_kernel_time(pa->calculate_elapsed_time());
+    pim_time = pa->calculate_elapsed_time();
+    pa->accumulate_pim_kernel_time(pim_time);
+    std::cout << "pimExecuteGemm time2: " << pim_time.count() * 1000 << std::endl << std::endl;
 
     pa->Tick();
+    PIM_PROFILE_TICK_A(PimAlign3);
     aligned_l1_v2->bshape = {1,1,(uint32_t)params.num_nodes,256};
     PimBo* aligned_l1_v2_2 = PimCreateAlignedBo(aligned_l1_v2);
     PimBo* aligned_l2_v1 = PimCreateAlignedBo(pim_l2_var1);
     PimBo* aligned_out = PimCreateAlignedBo(pim_out);
+    PIM_PROFILE_TOCK_A(PimAlign3);
     pa->Tock();
-    pa->accumulate_align_time(pa->calculate_elapsed_time());
+    align_time = pa->calculate_elapsed_time();
+    pa->accumulate_align_time(align_time);
+    std::cout << "align time3: " << align_time.count() * 1000 << std::endl << std::endl;
 
     pa->Tick();
+    PIM_PROFILE_TICK_A(PimExecuteGemm3);
     PimExecuteGemm(aligned_l2_v1, aligned_l1_v2_2, aligned_l2_w, nullptr, PimActFunc::NONE, I_X_W);
+    PimSynchronize();
+    PIM_PROFILE_TOCK_A(PimExecuteGemm3);
     pa->Tock();
-    pa->accumulate_pim_kernel_time(pa->calculate_elapsed_time());
+    pim_time = pa->calculate_elapsed_time();
+    pa->accumulate_pim_kernel_time(pim_time);
+    std::cout << "pimExecuteGemm time3: " << pim_time.count() * 1000 << std::endl << std::endl;
 
     pa->Tick();
+    PIM_PROFILE_TICK_A(PimAlign4);
     aligned_l2_v1->bshape = {1,1,256,4096};
     PimBo* aligned_l2_v1_2 = PimCreateAlignedBo(aligned_l2_v1);
+    PIM_PROFILE_TOCK_A(PimAlign4);
     pa->Tock();
-    pa->accumulate_align_time(pa->calculate_elapsed_time());
+    align_time = pa->calculate_elapsed_time();
+    pa->accumulate_align_time(align_time);
+    std::cout << "align time4: " << align_time.count() * 1000 << std::endl << std::endl;
 
     pa->Tick();
+    PIM_PROFILE_TICK_A(PimExecuteGemm4);
     PimExecuteGemm(aligned_out, alignedadj, aligned_l2_v1_2, nullptr, PimActFunc::NONE, I_X_W);
+    PimSynchronize();
+    PIM_PROFILE_TOCK_A(PimExecuteGemm4);
     pa->Tock();
-    pa->accumulate_pim_kernel_time(pa->calculate_elapsed_time());
+    pim_time = pa->calculate_elapsed_time();
+    pa->accumulate_pim_kernel_time(pim_time);
+    std::cout << "pimExecuteGemm time4: " << pim_time.count() * 1000 << std::endl << std::endl;
 
+    pa->Tick();
+    PIM_PROFILE_TICK_A(PimCopyAlignedData);
     PimCopyMemoryFromAligned(pim_out, aligned_out, DEVICE_TO_DEVICE);
-    half_out = PimCreateBo(1, 1, params.num_nodes, params.output_dim, PIM_FP16, MEM_TYPE_HOST);
+    PIM_PROFILE_TOCK_A(PimCopyAlignedData);
+    pa->Tock();
+    align_time = pa->calculate_elapsed_time();
+    pa->accumulate_align_time(align_time);
+    std::cout << "copy aligned out to origin out: " << align_time.count() * 1000 << std::endl << std::endl;
+
+    pa->Tick();
+    PIM_PROFILE_TICK_A(PimCopyD2H);
     PimCopyMemory(half_out, pim_out, DEVICE_TO_HOST);
+    PIM_PROFILE_TOCK_A(PimCopyD2H);
+    pa->Tock();
+    std::chrono::duration<double> copyD2H_time = pa->calculate_elapsed_time();
+    pa->accumulate_copyD2H_time(copyD2H_time);
+    std::cout << "copyD2H time1: " << copyD2H_time.count() * 1000 << std::endl << std::endl;
 
     variables.emplace_back(params.num_nodes * params.output_dim);
     // variables[4]

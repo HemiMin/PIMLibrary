@@ -2,6 +2,7 @@
 #include <random>
 #include "half.hpp"
 #include "pim_runtime_api.h"
+#include "utility/pim_profile.h"
 
 int PerformanceAnalyser::SetUp(Parser* parser)
 {
@@ -21,8 +22,10 @@ int PerformanceAnalyser::SetUp(Parser* parser)
     num_iter_ = parser->get_num_iter();
 
     Tick();
+    PIM_PROFILE_TICK_A(Initialize);
     ret = PimInitialize(platform_, precision_);
     Tock();
+    PIM_PROFILE_TOCK_A(Initialize);
     start_up_time_ = calculate_elapsed_time();
     ret = set_device();
     return ret;
@@ -43,6 +46,21 @@ void PerformanceAnalyser::accumulate_pim_kernel_time(std::chrono::duration<doubl
 void PerformanceAnalyser::accumulate_align_time(std::chrono::duration<double> time)
 { aligning_time_ += time; }
 
+void PerformanceAnalyser::accumulate_allocH_time(std::chrono::duration<double> time)
+{ allocH_time_ += time; }
+
+void PerformanceAnalyser::accumulate_allocD_time(std::chrono::duration<double> time)
+{ allocD_time_ += time; }
+
+void PerformanceAnalyser::accumulate_copyH2D_time(std::chrono::duration<double> time)
+{ copyH2D_time_ += time; }
+
+void PerformanceAnalyser::accumulate_copyD2H_time(std::chrono::duration<double> time)
+{ copyD2H_time_ += time; }
+
+void PerformanceAnalyser::accumulate_total_time(std::chrono::duration<double> time)
+{ avg_kernel_time_ += time; }
+
 void PerformanceAnalyser::calculate_avg_time() { kernel_execution_time_ = avg_kernel_time_ / (double)(num_iter_); }
 void PerformanceAnalyser::calculate_gflops(double flt_ops)
 {
@@ -52,8 +70,12 @@ void PerformanceAnalyser::print_analytical_data()
 {
     std::cout << "Time analytics: \nPlatform: " << parser_->get_platform() << std::endl;
     std::cout << "Time taken to initialize PIM : " << start_up_time_.count() * 1000 << " ms\n";
+    std::cout << "Time taken to allocH PIM : " << allocH_time_.count() * 1000 << " ms\n";
+    std::cout << "Time taken to allocD PIM : " << allocD_time_.count() * 1000 << " ms\n";
     std::cout << "Time taken to align data : " << aligning_time_.count() * 1000 << " ms\n";
-    std::cout << "Time taken to pim execute operation : " << pim_kernel_time_.count() * 1000 << " ms\n";
+    std::cout << "Time taken to copyH2D_time_ PIM : " << copyH2D_time_.count() * 1000 << " ms\n";
+    std::cout << "Time taken to copyD2H_time_ PIM : " << copyD2H_time_.count() * 1000 << " ms\n";
+    std::cout << "Time taken to pim execute operation : " << (pim_kernel_time_/(double)(num_iter_)).count() * 1000 << " ms\n";
     std::cout << "Time taken to execute operation : " << kernel_execution_time_.count() * 1000 << " ms\n";
     std::cout << "GFlops : " << gflops_ << " gflops\n";
 }

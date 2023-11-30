@@ -8,7 +8,7 @@ class PimGemmTest
 {
    public:
     PimGemmTest(unsigned n, unsigned c, unsigned in_h, unsigned in_w, unsigned out_h, unsigned out_w, PimActFunc act,
-                bool has_bias, PimGemmOrder gemm_order);
+                bool has_bias, PimGemmOrder gemm_order, PerformanceAnalyser* pa);
     ~PimGemmTest();
     void prepare(float alpha = 1.0f, float beta = 0.0f, float variation = 0.01f);
     void execute_op(bool block = true);
@@ -40,6 +40,8 @@ class PimGemmTest
     PimBo *h_i_, *h_w_, *h_b_, *h_o_;  // input, weight, bias, output
     PimBo *d_i_, *d_w_, *d_b_, *d_o_;
     PimBo* golden_;
+
+    PerformanceAnalyser* pa_;
 };
 
 class PimGemmTestFixture : public PerformanceAnalyser
