@@ -618,7 +618,7 @@ int PimExecuteGemm(PimBo* output, PimBo* input, PimBo* weight, PimBo* bias, PimA
     print_pimbo(output, "output");
 #endif
     DLOG(INFO) << "[START] " << __FUNCTION__ << " called";
-    PIM_PROFILE_TICK(ExecuteGemm);
+    PIM_PROFILE_TICK_A(ExecuteGemm);
     int ret = 0;
 
     if (pim_runtime == nullptr) {
@@ -627,7 +627,7 @@ int PimExecuteGemm(PimBo* output, PimBo* input, PimBo* weight, PimBo* bias, PimA
     }
 
     ret = pim_runtime->execute_gemm(output, input, weight, bias, act_func, gemm_order, stream, block);
-    PIM_PROFILE_TOCK(ExecuteGemm);
+    PIM_PROFILE_TOCK_A(ExecuteGemm);
 
     DLOG(INFO) << "[END] " << __FUNCTION__ << " called";
     return ret;

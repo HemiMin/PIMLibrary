@@ -19,6 +19,7 @@
 #include "executor/PimExecutorFactory.h"
 #include "pim_runtime_api.h"
 #include "utility/pim_debug.hpp"
+#include "utility/pim_profile.h"
 #include "utility/pim_log.h"
 #include "utility/pim_util.h"
 
@@ -403,6 +404,7 @@ PimBo* PimRuntime::get_preloaded_pim_gemm_weight(PimBo* dev_wei, PimGemmOrder ge
                                                  void* stream, bool save_for_reuse)
 {
     DLOG(INFO) << "[START] " << __FUNCTION__ << " called";
+    PIM_PROFILE_TICK_A(ReorderWeight);
     PimBo* pre_wei = find_preloaded_pim_weight(dev_wei);
 
     if (pre_wei == nullptr) {
@@ -456,6 +458,7 @@ PimBo* PimRuntime::get_preloaded_pim_gemm_weight(PimBo* dev_wei, PimGemmOrder ge
         }
     }
 
+    PIM_PROFILE_TOCK_A(ReorderWeight);
     DLOG(INFO) << "[END] " << __FUNCTION__ << " called";
     return pre_wei;
 }
