@@ -592,8 +592,8 @@ int HipPimExecutor::execute_aligned_gemm_tile_accum(PimBo* output, PimBo* input,
     int n_in_tile = input->bshape.w * sizeof(uint16_t) / pbi_->trans_size / pbi_->num_grf_A;
     int n_out_tile = output->bshape.w / (pbi_->num_pim_chan * pbi_->num_pim_blocks * pbi_->num_grf_B);
     int iter_cnt = weight->bshape.n * weight->bshape.c * weight->bshape.w / PIM_GEMV_OUT_ALIGN;
-    std::cout << "inputw: " << input->bshape.w << std::endl;
-    std::cout << "n_in_tile: " << n_in_tile << ",n_out_tile: " << n_out_tile
+    std::cout << "input hxw: " << input->bshape.h << "x" << input->bshape.w 
+              << ", n_in_tile: " << n_in_tile << ",n_out_tile: " << n_out_tile
               << ", iter_cnt: " << iter_cnt << std::endl;
     int is_bias = (bias != nullptr) ? 1 : 0;
     int is_relu = (act_func == ACT_RELU) ? 1 : 0;
@@ -606,8 +606,8 @@ int HipPimExecutor::execute_aligned_gemm_tile_accum(PimBo* output, PimBo* input,
     int device_id;
     hipGetDevice(&device_id);
 
-    double* ticks; 
-    hipMalloc((void**)&ticks, sizeof(double) * blocks * threads_per_block);
+    //double* ticks; 
+    //hipMalloc((void**)&ticks, sizeof(double) * blocks * threads_per_block);
 
     void (*gemm_kernel)(volatile uint8_t * __restrict__, volatile uint8_t * __restrict__,
                         volatile uint8_t * __restrict__, volatile uint8_t * __restrict__,
@@ -616,7 +616,7 @@ int HipPimExecutor::execute_aligned_gemm_tile_accum(PimBo* output, PimBo* input,
 #ifdef EMULATOR
                         PimMemTraceData*, int*, int, PimMemTracer*,
 #endif
-                        uint8_t*, int, double* ticks);
+                        uint8_t*, int/*, double* ticks*/);
 
     switch (n_in_tile) {
         case 8:
@@ -637,7 +637,7 @@ int HipPimExecutor::execute_aligned_gemm_tile_accum(PimBo* output, PimBo* input,
 #ifdef EMULATOR
         (PimMemTraceData*)d_fmtd16_, (int*)d_fmtd16_size_, fmtd_size_per_ch_, (PimMemTracer*)d_emulator_trace_,
 #endif
-        (uint8_t*)crf_bin, crf_size, ticks);
+        (uint8_t*)crf_bin, crf_size/*, ticks*/);
 #ifndef EMULATOR
     if (block) hipStreamSynchronize((hipStream_t)stream);
     PIM_PROFILE_TOCK_A(RunGemmKernel);
@@ -645,7 +645,6 @@ int HipPimExecutor::execute_aligned_gemm_tile_accum(PimBo* output, PimBo* input,
 
 #ifdef EMULATOR
     hipStreamSynchronize((hipStream_t)stream);
-    std::cout << "tick: " << ticks[0] << std::endl;
     PIM_PROFILE_TOCK_A(RunGemmKernel);
 
     PIM_PROFILE_TICK(RunGemmEmulation);

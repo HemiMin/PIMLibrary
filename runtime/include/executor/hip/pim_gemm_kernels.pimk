@@ -460,7 +460,7 @@ __global__ void pim_aligned_gemm_bias_relu_fp16(
 #ifdef EMULATOR
     PimMemTraceData* fmtd16, int* frd_size, int mt_width, PimMemTracer* emulator_trace,
 #endif
-    uint8_t* crf_binary, int crf_size, double* ticks)
+    uint8_t* crf_binary, int crf_size/*, double* ticks*/)
 {
 #ifdef EMULATOR
     emulator_trace->g_fba = (uint64_t)pim_ctr;
@@ -470,7 +470,7 @@ __global__ void pim_aligned_gemm_bias_relu_fp16(
     __syncthreads();
 #endif
 
-    int clock_i = hipThreadIdx_x + hipBlockIdx_x * hipBlockDim_x;
+    //int clock_i = hipThreadIdx_x + hipBlockIdx_x * hipBlockDim_x;
     unsigned long long int start, stop;
 #ifdef PREPARE_KERNEL
     int grf_shift = 3;
@@ -490,31 +490,31 @@ __global__ void pim_aligned_gemm_bias_relu_fp16(
 
 #if PARK_IN
     if (hipThreadIdx_x < 32) {
-        start = clock64();
+        //start = clock64();
         park_in(pim_ctr, gidx, num_ba, offset);
-        stop = clock64();
-        ticks[clock_i] += (double)(stop-start)/CLOCKS_PER_SEC;
+        //stop = clock64();
+        //ticks[clock_i] += (double)(stop-start)/CLOCKS_PER_SEC;
         //printf("tick parkin(%d):%f\n", clock_i, ticks[clock_i]);
     }
 #endif
 
 #if CHANGE_SB_HAB
     if (hipThreadIdx_x < 2) {
-        start = clock64();
+        //start = clock64();
         /* change SB mode to HAB mode */
         change_sb_hab(pim_ctr, offset);
-        stop = clock64();
-        ticks[clock_i] += (double)(stop-start)/CLOCKS_PER_SEC;
+        //stop = clock64();
+        //ticks[clock_i] += (double)(stop-start)/CLOCKS_PER_SEC;
         //printf("tick changesbhab(%d):%f\n", clock_i, ticks[clock_i]);
     }
 #endif
 
 #if PROGRAM_CRF
     if (hipThreadIdx_x < (crf_size >> 4)) {
-        start = clock64();
+        //start = clock64();
         program_crf_mod(pim_ctr, gidx, crf_binary, offset);
-        stop = clock64();
-        ticks[clock_i] += (double)(stop-start)/CLOCKS_PER_SEC;
+        //stop = clock64();
+        //ticks[clock_i] += (double)(stop-start)/CLOCKS_PER_SEC;
         //printf("tick crf(%d):%f\n", clock_i, ticks[clock_i]);
     }
 #endif
@@ -526,7 +526,7 @@ __global__ void pim_aligned_gemm_bias_relu_fp16(
           // inout_h is height of input which is same to height of output
           for (int in_idx = 0; in_idx < inout_h; in_idx++) {
                 for (int o_idx = 0; o_idx < n_out_tile; o_idx++) {
-                    start = clock64();
+                    //start = clock64();
                     addr = addr_gen(ch, 0, 0, 0, 0x3fff, 0x0);
                     W_CMD_R(&pim_ctr[addr + offset], gemv_hab_to_hab_pim + offset);
                     R_CMD(&pim_ctr[addr + offset]);
@@ -537,12 +537,12 @@ __global__ void pim_aligned_gemm_bias_relu_fp16(
                     // gemv_nt is inout_h idx
                     uint64_t i_offset = gemv_cnt * (n_in_tile << grf_shift);
                     int r_offset = (o_idx * n_in_tile) >> 1;
-                    stop = clock64();
-                    ticks[clock_i] += (double)(stop-start)/CLOCKS_PER_SEC;
+                    //stop = clock64();
+                    //ticks[clock_i] += (double)(stop-start)/CLOCKS_PER_SEC;
                     //printf("tick2(%d):%f\n", clock_i, ticks[clock_i]);
 
                     for (int i_idx = 0; i_idx < n_in_tile; i_idx += 2) {
-                        start = clock64();
+                        //start = clock64();
                         /* write grf_A from WRIO */
                         uint64_t i_addr = (i_offset + ((i_idx << grf_shift) + gidx)) << trans_shift;
                         int irow = (i_offset + ((i_idx << grf_shift) + gidx))/32;
@@ -602,13 +602,13 @@ __global__ void pim_aligned_gemm_bias_relu_fp16(
                         //        r_offset, o_idx, even_row, odd_row, gidx, 
                         //        w1_addr, w2_addr, w3_addr, w4_addr, 
                         //        w5_addr, w6_addr, w7_addr, w8_addr);
-                        stop = clock64();
-                        ticks[clock_i] += (double)(stop-start)/CLOCKS_PER_SEC;
+                        //stop = clock64();
+                        //ticks[clock_i] += (double)(stop-start)/CLOCKS_PER_SEC;
                         //printf("tick3(%d):%f\n", clock_i, ticks[clock_i]);
                     }
 
                     for (int i_idx = 1; i_idx < n_in_tile; i_idx += 2) {
-                        start = clock64();
+                        //start = clock64();
                         uint64_t i_addr = (i_offset + ((i_idx << grf_shift) + gidx)) << trans_shift;
                         int irow = (i_offset + ((i_idx << grf_shift) + gidx))/32;
                         int icol = (i_offset + ((i_idx << grf_shift) + gidx))%32;
@@ -667,11 +667,11 @@ __global__ void pim_aligned_gemm_bias_relu_fp16(
                         //        r_offset, o_idx, even_row, odd_row, gidx, 
                         //        w1_addr, w2_addr, w3_addr, w4_addr, 
                         //        w5_addr, w6_addr, w7_addr, w8_addr);
-                        stop = clock64();
-                        ticks[clock_i] += (double)(stop-start)/CLOCKS_PER_SEC;
+                        //stop = clock64();
+                        //ticks[clock_i] += (double)(stop-start)/CLOCKS_PER_SEC;
                         //printf("tick4(%d):%f\n", clock_i, ticks[clock_i]);
                     }
-                    start = clock64();
+                    //start = clock64();
                     loc = (gemv_cnt * n_out_tile << grf_shift) + (o_idx << grf_shift) + gidx;
                     row = loc >> col_shift;
                     col = loc % num_col;
@@ -688,8 +688,8 @@ __global__ void pim_aligned_gemm_bias_relu_fp16(
                     //if (ch==0 && gemv_cnt==39 && gidx==0 && offset==0) printf("out[%d][%d]=%f\n", gemv_cnt, gidx,((float)pim_partial_sum[addr+offset]));
 
                     change_habpim_hab(pim_ctr, offset);
-                    stop = clock64();
-                    ticks[clock_i] += (double)(stop-start)/CLOCKS_PER_SEC;
+                    //stop = clock64();
+                    //ticks[clock_i] += (double)(stop-start)/CLOCKS_PER_SEC;
                     //printf("tick5(%d):%f\n", clock_i, ticks[clock_i]);
                 }
                 // increment per inout_h idx
@@ -702,21 +702,21 @@ __global__ void pim_aligned_gemm_bias_relu_fp16(
 
 #if CHANGE_HAB_SB
     if (hipThreadIdx_x < 4) {
-        start = clock64();
+        //start = clock64();
         /* change HAB mode to SB mode */
         change_hab_sb(pim_ctr, gidx, offset);
-        stop = clock64();
-        ticks[clock_i] += (double)(stop-start)/CLOCKS_PER_SEC;
+        //stop = clock64();
+        //ticks[clock_i] += (double)(stop-start)/CLOCKS_PER_SEC;
         //printf("tick8(%d):%f\n", clock_i, ticks[clock_i]);
     }
 #endif
 
 #if PARK_OUT
     if (hipThreadIdx_x < 32) {
-        start = clock64();
+        //start = clock64();
         park_out(pim_ctr, gidx, num_ba, offset);
         stop = clock64();
-        ticks[clock_i] += (double)(stop-start)/CLOCKS_PER_SEC;
+        //ticks[clock_i] += (double)(stop-start)/CLOCKS_PER_SEC;
         //printf("tick9(%d):%f\n", clock_i, ticks[clock_i]);
     }
 #endif
@@ -777,7 +777,7 @@ __global__ void pim_aligned_gemm_bias_relu_8tile_fp16(
 #ifdef EMULATOR
     PimMemTraceData* fmtd16, int* frd_size, int mt_width, PimMemTracer* emulator_trace,
 #endif
-    uint8_t* crf_binary, int crf_size, double* ticks)
+    uint8_t* crf_binary, int crf_size/*, double* ticks*/)
 {
 #ifdef EMULATOR
     emulator_trace->g_fba = (uint64_t)pim_ctr;
@@ -788,7 +788,7 @@ __global__ void pim_aligned_gemm_bias_relu_8tile_fp16(
 #endif
 
     int clock_i = hipThreadIdx_x + hipBlockIdx_x * hipBlockDim_x;
-    clock_t start = clock64();
+    //clock_t start = clock64();
 #ifdef PREPARE_KERNEL
     int grf_shift = 3;
     int num_ba = 4;
@@ -951,8 +951,8 @@ __global__ void pim_aligned_gemm_bias_relu_8tile_fp16(
         frd_size[0] = emulator_trace->g_ridx[0];
     }
 #endif
-    clock_t stop = clock64();
-    ticks[clock_i] = (double)(stop-start)/CLOCKS_PER_SEC;
+    //clock_t stop = clock64();
+    //ticks[clock_i] = (double)(stop-start)/CLOCKS_PER_SEC;
 
 #if REDUCE_SUM
     int bg = hipThreadIdx_x >> 4;
