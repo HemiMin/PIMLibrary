@@ -598,7 +598,9 @@ int HipPimExecutor::execute_aligned_gemm_tile_accum(PimBo* output, PimBo* input,
     int is_bias = (bias != nullptr) ? 1 : 0;
     int is_relu = (act_func == ACT_RELU) ? 1 : 0;
 
-    uint8_t* crf_bin = pim_crf_generator_->find_crf(OP_GEMV, input->bshape.w * sizeof(uint16_t));
+    //HYEMI no crf cache
+    //uint8_t* crf_bin = pim_crf_generator_->find_crf(OP_GEMV, input->bshape.w * sizeof(uint16_t));
+    uint8_t* crf_bin = nullptr;
     int crf_size = 32;
     if (crf_bin == nullptr) {
         crf_bin = (uint8_t*)pim_crf_generator_->make_crf_bin(OP_GEMV, input->bshape.w * sizeof(uint16_t));
