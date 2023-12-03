@@ -238,7 +238,8 @@ int PimRuntime::copy_memory_from_aligned(PimBo* dst, PimBo* src, PimMemCpyType c
                c*(src->bshape.h*src->bshape.w) +
                h * src->bshape.w,
               dst->bshape_r.w * sizeof(half_float::half), kind) != hipSuccess) {
-          DLOG(INFO) << "[END] " << __FUNCTION__ << " Failed to pad";
+          DLOG(INFO) << "[END] " << __FUNCTION__ << " Failed to copy memory from aligned Bo";
+          DLOG(FATAL) << __FUNCTION__ << " Failed to copy memory from aligned Bo";
           return -1;
         }
       }
@@ -518,6 +519,7 @@ int PimRuntime::pad_aligned_bo(PimBo* dst, PimBo* src)
                h * src->bshape_r.w,
               src->bshape_r.w * sizeof(half_float::half), kind) != hipSuccess) {
           DLOG(INFO) << "[END] " << __FUNCTION__ << " Failed to pad";
+          DLOG(FATAL) << __FUNCTION__ << " Failed to pad";
           return -1;
         }
       }
