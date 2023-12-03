@@ -676,7 +676,7 @@ int HipPimExecutor::execute_aligned_gemm_tile_accum(PimBo* output, PimBo* input,
 int HipPimExecutor::execute_chwise_gemm_tile_accum(PimBo* output, PimBo* input, PimBo* weight, PimBo* bias,
                                                    PimActFunc act_func, void* stream, bool block)
 {
-    PIM_PROFILE_TICK(PrepareGemmKernel);
+    PIM_PROFILE_TICK_A(PrepareGemmKernel);
     DLOG(INFO) << "[START] " << __FUNCTION__ << " called";
     int ret = 0;
 
@@ -717,9 +717,9 @@ int HipPimExecutor::execute_chwise_gemm_tile_accum(PimBo* output, PimBo* input, 
             break;
     }
 
-    PIM_PROFILE_TOCK(PrepareGemmKernel);
+    PIM_PROFILE_TOCK_A(PrepareGemmKernel);
 
-    PIM_PROFILE_TICK(RunGemmKernel);
+    PIM_PROFILE_TICK_A(RunGemmKernel);
     int device_id = 0;
     hipGetDevice(&device_id);
     hipLaunchKernelGGL(
@@ -738,9 +738,9 @@ int HipPimExecutor::execute_chwise_gemm_tile_accum(PimBo* output, PimBo* input, 
 
 #ifdef EMULATOR
     hipStreamSynchronize((hipStream_t)stream);
-    PIM_PROFILE_TOCK(RunGemmKernel);
+    PIM_PROFILE_TOCK_A(RunGemmKernel);
 
-    PIM_PROFILE_TICK(RunGemmEmulation);
+    PIM_PROFILE_TICK_A(RunGemmEmulation);
     hipMemcpy((void*)h_fmtd16_size_, (void*)d_fmtd16_size_, sizeof(int), hipMemcpyDeviceToHost);
     hipMemcpy((void*)h_fmtd16_, (void*)d_fmtd16_, sizeof(PimMemTraceData) * max_fmtd_size_, hipMemcpyDeviceToHost);
 
@@ -758,7 +758,7 @@ int HipPimExecutor::execute_chwise_gemm_tile_accum(PimBo* output, PimBo* input, 
         pim_emulator_->execute_gemm_bias_act(output, weight, h_fmtd32_, h_fmtd32_size_[0], OP_GEMV,
                                              g_pim_base_addr[device_id], pim_gemv_tmp_buffer_, bias, act_func);
 
-    PIM_PROFILE_TOCK(RunGemmEmulation);
+    PIM_PROFILE_TOCK_A(RunGemmEmulation);
 #endif
     DLOG(INFO) << "[END] " << __FUNCTION__ << " called";
     return ret;
