@@ -60,7 +60,7 @@ class PimRuntime
     int execute_dummy(void);
     PimBo* generate_gemm_weight_from_buffer(PimBo* src, PimGemmOrder gemm_order, bool reorder_on_device = false,
                                             void* stream = nullptr, bool save_for_reuse = false);
-    PimBo* get_preloaded_pim_gemm_weight(PimBo* dev_wei, PimGemmOrder gemm_order, bool reorder_on_device = false,
+    PimBo* get_preloaded_pim_gemm_weight(PimBo* dev_wei, PimGemmOrder gemm_order, bool reorder_on_device = true,
                                          void* stream = nullptr, bool save_for_reuse = false);
     int pad_aligned_bo(PimBo* dst, PimBo* src);
 
