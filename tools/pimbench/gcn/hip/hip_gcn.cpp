@@ -201,7 +201,7 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
     
     pa->Tick();
     PIM_PROFILE_TICK_A(PimExecuteGemm1);
-    PimExecuteGemm(aligned_l1_v1, alignedi, aligned_l1_w, nullptr, PimActFunc::NONE, I_X_W);
+    PimExecuteGemm(aligned_l1_v1, alignedi, aligned_l1_w, nullptr, PimActFunc::NONE, I_X_W, nullptr, true);
     PimSynchronize();
     PIM_PROFILE_TOCK_A(PimExecuteGemm1);
     pa->Tock();
@@ -221,7 +221,7 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
 
     pa->Tick();
     PIM_PROFILE_TICK_A(PimExecuteGemm2);
-    PimExecuteGemm(aligned_l1_v2, alignedadj, aligned_l1_v1_2, nullptr, PimActFunc::ACT_RELU, I_X_W);
+    PimExecuteGemm(aligned_l1_v2, alignedadj, aligned_l1_v1_2, nullptr, PimActFunc::ACT_RELU, I_X_W, nullptr, true);
     PimSynchronize();
     PIM_PROFILE_TOCK_A(PimExecuteGemm2);
     pa->Tock();
@@ -243,7 +243,7 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
 
     pa->Tick();
     PIM_PROFILE_TICK_A(PimExecuteGemm3);
-    PimExecuteGemm(aligned_l2_v1, aligned_l1_v2_2, aligned_l2_w, nullptr, PimActFunc::NONE, I_X_W);
+    PimExecuteGemm(aligned_l2_v1, aligned_l1_v2_2, aligned_l2_w, nullptr, PimActFunc::NONE, I_X_W, nullptr, true);
     PimSynchronize();
     PIM_PROFILE_TOCK_A(PimExecuteGemm3);
     pa->Tock();
@@ -263,7 +263,7 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
 
     pa->Tick();
     PIM_PROFILE_TICK_A(PimExecuteGemm4);
-    PimExecuteGemm(aligned_out, alignedadj, aligned_l2_v1_2, nullptr, PimActFunc::NONE, I_X_W);
+    PimExecuteGemm(aligned_out, alignedadj, aligned_l2_v1_2, nullptr, PimActFunc::NONE, I_X_W, nullptr, true);
     PimSynchronize();
     PIM_PROFILE_TOCK_A(PimExecuteGemm4);
     pa->Tock();
@@ -326,6 +326,7 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
     PimDestroyBo(aligned_l1_v1_2);
     PimDestroyBo(aligned_l1_v2_2);
     PimDestroyBo(aligned_l2_v1_2);
+    PimDestroyBo(aligned_out);
     PIM_PROFILE_TOCK_A(PimDeallocD1);
     pa->Tock();
     std::chrono::duration<double> deallocD_time = pa->calculate_elapsed_time();
