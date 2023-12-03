@@ -189,20 +189,65 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
 
 
     pa->Tick();
-    PIM_PROFILE_TICK_A(PimAlign1);
+    PIM_PROFILE_TICK_A(PimAlignInput);
     PimBo* alignedi = PimCreateAlignedBo(pim_input);
-    PimBo* alignedadj = PimCreateAlignedBo(pim_adj_mat);
-    PimBo* aligned_l1_w = PimCreateAlignedBo(pim_l1_weight);
-    PimBo* aligned_l2_w = PimCreateAlignedBo(pim_l2_weight);
-
-    PimBo* aligned_l1_v1 = PimCreateAlignedBo(pim_l1_var1);
-    PimBo* aligned_l1_v2 = PimCreateAlignedBo(pim_l1_var2);
-    PIM_PROFILE_TOCK_A(PimAlign1);
+    PIM_PROFILE_TOCK_A(PimAlignInput);
     pa->Tock();
     std::chrono::duration<double> align_time = pa->calculate_elapsed_time();
     pa->accumulate_align_time(align_time);
     pa->accumulate_total_time(align_time);
-    std::cout << "align time1: " << align_time.count() * 1000 << std::endl << std::endl;
+    std::cout << "align time input: " << align_time.count() * 1000 << std::endl << std::endl;
+
+    pa->Tick();
+    PIM_PROFILE_TICK_A(PimAlignAdj);
+    PimBo* alignedadj = PimCreateAlignedBo(pim_adj_mat);
+    PIM_PROFILE_TOCK_A(PimAlignAdj);
+    pa->Tock();
+    align_time = pa->calculate_elapsed_time();
+    pa->accumulate_align_time(align_time);
+    pa->accumulate_total_time(align_time);
+    std::cout << "align time adj: " << align_time.count() * 1000 << std::endl << std::endl;
+
+
+    pa->Tick();
+    PIM_PROFILE_TICK_A(PimAlignL1W);
+    PimBo* aligned_l1_w = PimCreateAlignedBo(pim_l1_weight);
+    PIM_PROFILE_TOCK_A(PimAlignL1W);
+    pa->Tock();
+    align_time = pa->calculate_elapsed_time();
+    pa->accumulate_align_time(align_time);
+    pa->accumulate_total_time(align_time);
+    std::cout << "align time l1_w: " << align_time.count() * 1000 << std::endl << std::endl;
+
+    pa->Tick();
+    PIM_PROFILE_TICK_A(PimAlignL2W);
+    PimBo* aligned_l2_w = PimCreateAlignedBo(pim_l2_weight);
+    PIM_PROFILE_TOCK_A(PimAlignL2W);
+    pa->Tock();
+    align_time = pa->calculate_elapsed_time();
+    pa->accumulate_align_time(align_time);
+    pa->accumulate_total_time(align_time);
+    std::cout << "align time l2_w: " << align_time.count() * 1000 << std::endl << std::endl;
+
+    pa->Tick();
+    PIM_PROFILE_TICK_A(PimAlignL1V1);
+    PimBo* aligned_l1_v1 = PimCreateAlignedBo(pim_l1_var1);
+    PIM_PROFILE_TOCK_A(PimAlignL1V1);
+    pa->Tock();
+    align_time = pa->calculate_elapsed_time();
+    pa->accumulate_align_time(align_time);
+    pa->accumulate_total_time(align_time);
+    std::cout << "align time l1_var1: " << align_time.count() * 1000 << std::endl << std::endl;
+
+    pa->Tick();
+    PIM_PROFILE_TICK_A(PimAlignL1V2);
+    PimBo* aligned_l1_v2 = PimCreateAlignedBo(pim_l1_var2);
+    PIM_PROFILE_TOCK_A(PimAlignL1V2);
+    pa->Tock();
+    align_time = pa->calculate_elapsed_time();
+    pa->accumulate_align_time(align_time);
+    pa->accumulate_total_time(align_time);
+    std::cout << "align time l1_var2: " << align_time.count() * 1000 << std::endl << std::endl;
     
     pa->Tick();
     PIM_PROFILE_TICK_A(PimExecuteGemm1);
@@ -216,15 +261,15 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
     std::cout << "pimExecuteGemm time1: " << pim_time.count() * 1000 << std::endl << std::endl;
 
     pa->Tick();
-    PIM_PROFILE_TICK_A(PimAlign2);
+    PIM_PROFILE_TICK_A(PimAlignL1V1_2);
     aligned_l1_v1->bshape = {1,1,256,4096};
     PimBo* aligned_l1_v1_2 = PimCreateAlignedBo(aligned_l1_v1);
-    PIM_PROFILE_TOCK_A(PimAlign2);
+    PIM_PROFILE_TOCK_A(PimAlignL1V1_2);
     pa->Tock();
     align_time = pa->calculate_elapsed_time();
     pa->accumulate_align_time(align_time);
     pa->accumulate_total_time(align_time);
-    std::cout << "align time2: " << align_time.count() * 1000 << std::endl;
+    std::cout << "align time l1_var1_2: " << align_time.count() * 1000 << std::endl;
 
     pa->Tick();
     PIM_PROFILE_TICK_A(PimExecuteGemm2);
@@ -238,17 +283,35 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
     std::cout << "pimExecuteGemm time2: " << pim_time.count() * 1000 << std::endl << std::endl;
 
     pa->Tick();
-    PIM_PROFILE_TICK_A(PimAlign3);
+    PIM_PROFILE_TICK_A(PimAlignL1V2_2);
     aligned_l1_v2->bshape = {1,1,(uint32_t)params.num_nodes,256};
     PimBo* aligned_l1_v2_2 = PimCreateAlignedBo(aligned_l1_v2);
-    PimBo* aligned_l2_v1 = PimCreateAlignedBo(pim_l2_var1);
-    PimBo* aligned_out = PimCreateAlignedBo(pim_out);
-    PIM_PROFILE_TOCK_A(PimAlign3);
+    PIM_PROFILE_TOCK_A(PimAlignL1V2_2);
     pa->Tock();
     align_time = pa->calculate_elapsed_time();
     pa->accumulate_align_time(align_time);
     pa->accumulate_total_time(align_time);
-    std::cout << "align time3: " << align_time.count() * 1000 << std::endl << std::endl;
+    std::cout << "align time l1_var2_2: " << align_time.count() * 1000 << std::endl << std::endl;
+
+    pa->Tick();
+    PIM_PROFILE_TICK_A(PimAlignL2V1);
+    PimBo* aligned_l2_v1 = PimCreateAlignedBo(pim_l2_var1);
+    PIM_PROFILE_TOCK_A(PimAlignL2V1);
+    pa->Tock();
+    align_time = pa->calculate_elapsed_time();
+    pa->accumulate_align_time(align_time);
+    pa->accumulate_total_time(align_time);
+    std::cout << "align time l2_var1: " << align_time.count() * 1000 << std::endl << std::endl;
+
+    pa->Tick();
+    PIM_PROFILE_TICK_A(PimAlignOut);
+    PimBo* aligned_out = PimCreateAlignedBo(pim_out);
+    PIM_PROFILE_TOCK_A(PimAlignOut);
+    pa->Tock();
+    align_time = pa->calculate_elapsed_time();
+    pa->accumulate_align_time(align_time);
+    pa->accumulate_total_time(align_time);
+    std::cout << "align out: " << align_time.count() * 1000 << std::endl << std::endl;
 
     pa->Tick();
     PIM_PROFILE_TICK_A(PimExecuteGemm3);
@@ -262,15 +325,15 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
     std::cout << "pimExecuteGemm time3: " << pim_time.count() * 1000 << std::endl << std::endl;
 
     pa->Tick();
-    PIM_PROFILE_TICK_A(PimAlign4);
+    PIM_PROFILE_TICK_A(PimAlignL2V1_2);
     aligned_l2_v1->bshape = {1,1,256,4096};
     PimBo* aligned_l2_v1_2 = PimCreateAlignedBo(aligned_l2_v1);
-    PIM_PROFILE_TOCK_A(PimAlign4);
+    PIM_PROFILE_TOCK_A(PimAlignL2V1_2);
     pa->Tock();
     align_time = pa->calculate_elapsed_time();
     pa->accumulate_align_time(align_time);
     pa->accumulate_total_time(align_time);
-    std::cout << "align time4: " << align_time.count() * 1000 << std::endl << std::endl;
+    std::cout << "align time l2_var1_2: " << align_time.count() * 1000 << std::endl << std::endl;
 
     pa->Tick();
     PIM_PROFILE_TICK_A(PimExecuteGemm4);
