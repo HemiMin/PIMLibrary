@@ -47,25 +47,26 @@ PimGemmTest::PimGemmTest(unsigned n, unsigned c, unsigned in_h, unsigned in_w, u
     h_i_ = PimCreateBo(desc_, MEM_TYPE_HOST, GEMM_INPUT);
     h_w_ = PimCreateBo(desc_, MEM_TYPE_HOST, GEMM_WEIGHT);
     h_o_ = PimCreateBo(desc_, MEM_TYPE_HOST, GEMM_OUTPUT);
+    if (has_bias_) h_b_ = PimCreateBo(desc_, MEM_TYPE_HOST, GEMM_BIAS);
     PIM_PROFILE_TOCK_A(PimAllocH1);
     pa_->Tock();
     std::chrono::duration<double> allocH_time = pa->calculate_elapsed_time();
-    pa->accumulate_allocH_time(allocH_time);
+    pa_->accumulate_allocH_time(allocH_time);
+    pa_->accumulate_total_time(allocH_time);
     std::cout << "allocH time1: " << allocH_time.count() * 1000 << std::endl << std::endl;
 
-    if (has_bias_) h_b_ = PimCreateBo(desc_, MEM_TYPE_HOST, GEMM_BIAS);
     pa_->Tick();
     PIM_PROFILE_TICK_A(PimAllocD1);
     d_i_ = PimCreateBo(desc_, MEM_TYPE_DEVICE, GEMM_INPUT);
     d_w_ = PimCreateBo(desc_, MEM_TYPE_DEVICE, GEMM_WEIGHT);
     d_o_ = PimCreateBo(desc_, MEM_TYPE_DEVICE, GEMM_OUTPUT);
+    if (has_bias_) d_b_ = PimCreateBo(desc_, MEM_TYPE_DEVICE, GEMM_BIAS);
     PIM_PROFILE_TOCK_A(PimAllocD1);
     pa_->Tock();
     std::chrono::duration<double> allocD_time = pa_->calculate_elapsed_time();
     pa_->accumulate_allocD_time(allocD_time);
+    pa_->accumulate_total_time(allocD_time);
     std::cout << "allocD time1: " << allocD_time.count() * 1000 << std::endl << std::endl;
-
-    if (has_bias_) d_b_ = PimCreateBo(desc_, MEM_TYPE_DEVICE, GEMM_BIAS);
 
     golden_ = PimCreateBo(desc_, MEM_TYPE_HOST, GEMM_OUTPUT);
 }
@@ -77,26 +78,28 @@ PimGemmTest::~PimGemmTest()
     PimDestroyBo(h_i_);
     PimDestroyBo(h_w_);
     PimDestroyBo(h_o_);
+    if (has_bias_) PimDestroyBo(h_b_);
     PIM_PROFILE_TOCK_A(PimDeallocH);
     pa_->Tock();
     std::chrono::duration<double> deallocH_time = pa_->calculate_elapsed_time();
-    pa_->accumulate_allocD_time(deallocH_time);
+    pa_->accumulate_deallocH_time(deallocH_time);
+    pa_->accumulate_total_time(deallocH_time);
     std::cout << "deallocH time: " << deallocH_time.count() * 1000 << std::endl << std::endl;
-    if (has_bias_) PimDestroyBo(h_b_);
 
     pa_->Tick();
     PIM_PROFILE_TICK_A(PimDeallocD);
     PimDestroyBo(d_i_);
     PimDestroyBo(d_w_);
     PimDestroyBo(d_o_);
+    if (has_bias_) PimDestroyBo(d_b_);
     PIM_PROFILE_TOCK_A(PimDeallocD);
     pa_->Tock();
     std::chrono::duration<double> deallocD_time = pa_->calculate_elapsed_time();
-    pa_->accumulate_allocD_time(deallocD_time);
+    pa_->accumulate_deallocD_time(deallocD_time);
+    pa_->accumulate_total_time(deallocD_time);
     std::cout << "deallocD time: " << deallocD_time.count() * 1000 << std::endl << std::endl;
 
     PimDestroyGemmDesc(desc_);
-    if (has_bias_) PimDestroyBo(d_b_);
 
     PimDestroyBo(golden_);
 }
@@ -138,27 +141,25 @@ void PimGemmTest::prepare(float alpha, float beta, float variation)
     PIM_PROFILE_TICK_A(PimCopyH2D1);
     PimCopyMemory(d_i_, h_i_, HOST_TO_DEVICE);
     PimCopyMemory(d_w_, h_w_, HOST_TO_DEVICE);
-    PIM_PROFILE_TOCK_A(PimCopyH2D1);
-    pa_->Tock();
-
-    std::chrono::duration<double> copyH2D_time = pa_->calculate_elapsed_time();
-    pa_->accumulate_copyH2D_time(copyH2D_time);
-    std::cout << "copyH2D time1: " << copyH2D_time.count() * 1000 << std::endl << std::endl;
-
-    PimCopyMemory(d_o_, h_o_, HOST_TO_DEVICE);
-
     if (has_bias_) {
         PimCopyMemory(d_b_, h_b_, HOST_TO_DEVICE);
     } else {
         d_b_ = nullptr;
     }
+    PIM_PROFILE_TOCK_A(PimCopyH2D1);
+    pa_->Tock();
+    std::chrono::duration<double> copyH2D_time = pa_->calculate_elapsed_time();
+    pa_->accumulate_copyH2D_time(copyH2D_time);
+    pa_->accumulate_total_time(copyH2D_time);
+    std::cout << "copyH2D time1: " << copyH2D_time.count() * 1000 << std::endl << std::endl;
+
+    PimCopyMemory(d_o_, h_o_, HOST_TO_DEVICE);
 }
 
 void PimGemmTest::execute_op(bool block)
 {
     (void)PimExecuteGemm(d_o_, d_i_, d_w_, d_b_, act_, gemm_order_, nullptr, block);
     if (!block) {
-      std::cout << "block" << std::endl;
       PimSynchronize();
     }
 }
@@ -200,20 +201,15 @@ int PimGemmTestFixture::ExecuteTest()
 {
     act = (parser_->get_act_function() == "relu") ? ACT_RELU : NONE;
     has_bias = (parser_->get_has_bias()) ? true : false;
-    auto start = std::chrono::high_resolution_clock::now();
     PimGemmTest pimGemmTest = PimGemmTest(num_batch_, num_channels_, input_height_, input_width_, output_height_,
                                           output_width_, act, has_bias, order_, (PerformanceAnalyser*)this);
     pimGemmTest.prepare();
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> total_time = end - start;
-    accumulate_total_time(total_time);
 
     // warmup
     pimGemmTest.execute_op(true);
     std::cout << "=======WarmUp end========" << std::endl;
 
     for (int i = 0; i < num_iter_; i++) {
-        //Tick();
         Tick();
         PIM_PROFILE_TICK_A(PimExecuteGemm);
         pimGemmTest.execute_op(block_);
@@ -226,10 +222,10 @@ int PimGemmTestFixture::ExecuteTest()
         //avg_kernel_time_ += calculate_elapsed_time();
     }
 
-    start = std::chrono::high_resolution_clock::now();
+    auto start = std::chrono::high_resolution_clock::now();
     pimGemmTest.finalize();
-    end = std::chrono::high_resolution_clock::now();
-    total_time = end - start;
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> total_time = end - start;
     accumulate_total_time(total_time);
     accumulate_total_time(pim_kernel_time_/(double)num_iter_);
 

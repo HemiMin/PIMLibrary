@@ -49,7 +49,7 @@ double getTickFrequency(void);
 #define PIM_PROFILE_TICK_A(name) long long __tick_##name = getTickCount()
 #define PIM_PROFILE_TOCK_A(name)                                                                                   \
     std::cout << #name                                                                                             \
-              << " time (ms) : " << ((double(getTickCount() - __tick_##name) / (double)getTickFrequency())) * 1000 \
+              << " time (us) : " << std::fixed << ((double(getTickCount() - __tick_##name) / (double)getTickFrequency())) * 1000000 \
               << std::endl;
 #define PIM_PROFILE_TOCK_ITER_A(name, iter_cnt)                                                                \
     std::cout << #name << " time (ms) : "                                                                      \

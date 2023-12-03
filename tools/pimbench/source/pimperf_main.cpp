@@ -38,7 +38,10 @@ int main(int argc, char* argv[])
         ret = analyser->SetUp(parser);
         if (ret == 0) {
             int success = analyser->ExecuteTest();
-            analyser->print_analytical_data();
+            string op = vm["operation"].as<string>();
+            if (op != "gcn") {
+              analyser->print_analytical_data();
+            }
         }
     }
     else{

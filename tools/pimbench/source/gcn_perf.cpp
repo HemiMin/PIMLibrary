@@ -80,27 +80,23 @@ int PimGCNTestFixture::ExecuteTest()
 
     avg_kernel_time_ = std::chrono::duration<double>::zero();
     for (int i = 0; i < num_iter_; i++) {
-      auto start = std::chrono::high_resolution_clock::now();
       PIM_PROFILE_TICK_A(TotalTime);
       pimGCNTest.execute_op((PerformanceAnalyser*)this, true);
       PIM_PROFILE_TOCK_A(TotalTime);
-      auto end = std::chrono::high_resolution_clock::now();
-      std::chrono::duration<double> total_time = end - start;
-      accumulate_total_time(total_time);
     }
     calculate_avg_time();
 
     std::cout << "===========GCN Time===============" << std::endl;
-    std::cout << "Time taken to initialize PIM : " << start_up_time_.count() * 1000 << " ms\n";
-    std::cout << "Time taken to allocH PIM : " << (allocH_time_/(double)(num_iter_)).count() * 1000 << " ms\n";
-    std::cout << "Time taken to allocD PIM : " << (allocD_time_/(double)(num_iter_)).count() * 1000 << " ms\n";
-    std::cout << "Time taken to align data : " << (aligning_time_/(double)(num_iter_)).count() * 1000 << " ms\n";
-    std::cout << "Time taken to copyH2D_time_ PIM : " << (copyH2D_time_/(double)(num_iter_)).count() * 1000 << " ms\n";
-    std::cout << "Time taken to copyD2H_time_ PIM : " << (copyD2H_time_/(double)(num_iter_)).count() * 1000 << " ms\n";
-    std::cout << "Time taken to pim execute operation : " << (pim_kernel_time_/(double)(num_iter_)).count() * 1000 << " ms\n";
-    std::cout << "Time taken to deallocH PIM : " << (deallocH_time_/(double)(num_iter_)).count() * 1000 << " ms\n";
-    std::cout << "Time taken to deallocD PIM : " << (deallocD_time_/(double)(num_iter_)).count() * 1000 << " ms\n";
-    std::cout << "Time taken to execute operation : " << kernel_execution_time_.count() * 1000 << " ms\n\n";
+    std::cout << "Time taken to initialize PIM : " << std::fixed << start_up_time_.count() * 1000000 << " us\n";
+    std::cout << "Time taken to allocH PIM : " << std::fixed << (allocH_time_/(double)(num_iter_)).count() * 1000000 << " us\n";
+    std::cout << "Time taken to allocD PIM : " << std::fixed << (allocD_time_/(double)(num_iter_)).count() * 1000000 << " us\n";
+    std::cout << "Time taken to align data : " << std::fixed << (aligning_time_/(double)(num_iter_)).count() * 1000000 << " us\n";
+    std::cout << "Time taken to copyH2D_time_ PIM : " << std::fixed << (copyH2D_time_/(double)(num_iter_)).count() * 1000000 << " us\n";
+    std::cout << "Time taken to copyD2H_time_ PIM : " << std::fixed << (copyD2H_time_/(double)(num_iter_)).count() * 1000000 << " us\n";
+    std::cout << "Time taken to pim execute operation : " << std::fixed << (pim_kernel_time_/(double)(num_iter_)).count() * 1000000 << " us\n";
+    std::cout << "Time taken to deallocH PIM : " << std::fixed << (deallocH_time_/(double)(num_iter_)).count() * 1000000 << " us\n";
+    std::cout << "Time taken to deallocD PIM : " << std::fixed << (deallocD_time_/(double)(num_iter_)).count() * 1000000 << " us\n";
+    std::cout << "Time taken to execute operation : " << std::fixed << kernel_execution_time_.count() * 1000000 << " us\n\n";
 
 
     //avg_kernel_time_ = std::chrono::duration<double>::zero();

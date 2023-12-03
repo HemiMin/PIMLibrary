@@ -74,15 +74,17 @@ void PerformanceAnalyser::calculate_gflops(double flt_ops)
 }
 void PerformanceAnalyser::print_analytical_data()
 {
-    std::cout << "Time analytics: \nPlatform: " << parser_->get_platform() << std::endl;
-    std::cout << "Time taken to initialize PIM : " << start_up_time_.count() * 1000 << " ms\n";
-    std::cout << "Time taken to allocH PIM : " << allocH_time_.count() * 1000 << " ms\n";
-    std::cout << "Time taken to allocD PIM : " << allocD_time_.count() * 1000 << " ms\n";
-    std::cout << "Time taken to align data : " << aligning_time_.count() * 1000 << " ms\n";
-    std::cout << "Time taken to copyH2D_time_ PIM : " << copyH2D_time_.count() * 1000 << " ms\n";
-    std::cout << "Time taken to copyD2H_time_ PIM : " << copyD2H_time_.count() * 1000 << " ms\n";
-    std::cout << "Time taken to pim execute operation : " << (pim_kernel_time_/(double)(num_iter_)).count() * 1000 << " ms\n";
-    std::cout << "Time taken to execute operation : " << kernel_execution_time_.count() * 1000 << " ms\n";
+    std::cout << "Time analytics: \nPlatform: " << std::fixed << parser_->get_platform() << std::endl;
+    std::cout << "Time taken to initialize PIM : " << std::fixed << start_up_time_.count() * 1000000 << " us\n";
+    std::cout << "Time taken to allocH PIM : " << std::fixed << allocH_time_.count() * 1000000 << " us\n";
+    std::cout << "Time taken to allocD PIM : " << std::fixed << allocD_time_.count() * 1000000 << " us\n";
+    std::cout << "Time taken to deallocH PIM : " << std::fixed << deallocH_time_.count() * 1000000 << " us\n";
+    std::cout << "Time taken to deallocD PIM : " << std::fixed << deallocD_time_.count() * 1000000 << " us\n";
+    std::cout << "Time taken to align data : " << std::fixed << aligning_time_.count() * 1000000 << " us\n";
+    std::cout << "Time taken to copyH2D_time_ PIM : " << std::fixed << copyH2D_time_.count() * 1000000 << " us\n";
+    std::cout << "Time taken to copyD2H_time_ PIM : " << std::fixed << copyD2H_time_.count() * 1000000 << " us\n";
+    std::cout << "Time taken to pim execute operation : " << std::fixed << (pim_kernel_time_/(double)(num_iter_)).count() * 1000000 << " us\n";
+    std::cout << "Time taken to execute operation : " << std::fixed << kernel_execution_time_.count() * 1000000 << " us\n";
     std::cout << "GFlops : " << gflops_ << " gflops\n";
 }
 

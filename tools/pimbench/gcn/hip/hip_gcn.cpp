@@ -132,6 +132,7 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
     pa->Tock();
     std::chrono::duration<double> allocH_time = pa->calculate_elapsed_time();
     pa->accumulate_allocH_time(allocH_time);
+    pa->accumulate_total_time(allocH_time);
     std::cout << "allocH time1: " << allocH_time.count() * 1000 << std::endl << std::endl;
 
     f2h((half_float::half*)half_input->data, host_input.data(), input_size);
@@ -153,6 +154,7 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
     pa->Tock();
     std::chrono::duration<double> allocD_time = pa->calculate_elapsed_time();
     pa->accumulate_allocD_time(allocD_time);
+    pa->accumulate_total_time(allocD_time);
     std::cout << "allocD time1: " << allocD_time.count() * 1000 << std::endl << std::endl;
 
     pa->Tick();
@@ -165,6 +167,7 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
     pa->Tock();
     std::chrono::duration<double> copyH2D_time = pa->calculate_elapsed_time();
     pa->accumulate_copyH2D_time(copyH2D_time);
+    pa->accumulate_total_time(copyH2D_time);
     std::cout << "copyH2D time1: " << copyH2D_time.count() * 1000 << std::endl << std::endl;
 
     pa->Tick();
@@ -181,6 +184,7 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
     PIM_PROFILE_TOCK_A(PimAllocD2);
     allocD_time = pa->calculate_elapsed_time();
     pa->accumulate_allocD_time(allocD_time);
+    pa->accumulate_total_time(allocD_time);
     std::cout << "allocD time2: " << allocD_time.count() * 1000 << std::endl << std::endl;
 
 
@@ -197,6 +201,7 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
     pa->Tock();
     std::chrono::duration<double> align_time = pa->calculate_elapsed_time();
     pa->accumulate_align_time(align_time);
+    pa->accumulate_total_time(align_time);
     std::cout << "align time1: " << align_time.count() * 1000 << std::endl << std::endl;
     
     pa->Tick();
@@ -207,6 +212,7 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
     pa->Tock();
     std::chrono::duration<double> pim_time = pa->calculate_elapsed_time();
     pa->accumulate_pim_kernel_time(pim_time);
+    pa->accumulate_total_time(pim_time);
     std::cout << "pimExecuteGemm time1: " << pim_time.count() * 1000 << std::endl << std::endl;
 
     pa->Tick();
@@ -217,6 +223,7 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
     pa->Tock();
     align_time = pa->calculate_elapsed_time();
     pa->accumulate_align_time(align_time);
+    pa->accumulate_total_time(align_time);
     std::cout << "align time2: " << align_time.count() * 1000 << std::endl;
 
     pa->Tick();
@@ -227,6 +234,7 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
     pa->Tock();
     pim_time = pa->calculate_elapsed_time();
     pa->accumulate_pim_kernel_time(pim_time);
+    pa->accumulate_total_time(pim_time);
     std::cout << "pimExecuteGemm time2: " << pim_time.count() * 1000 << std::endl << std::endl;
 
     pa->Tick();
@@ -239,6 +247,7 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
     pa->Tock();
     align_time = pa->calculate_elapsed_time();
     pa->accumulate_align_time(align_time);
+    pa->accumulate_total_time(align_time);
     std::cout << "align time3: " << align_time.count() * 1000 << std::endl << std::endl;
 
     pa->Tick();
@@ -249,6 +258,7 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
     pa->Tock();
     pim_time = pa->calculate_elapsed_time();
     pa->accumulate_pim_kernel_time(pim_time);
+    pa->accumulate_total_time(pim_time);
     std::cout << "pimExecuteGemm time3: " << pim_time.count() * 1000 << std::endl << std::endl;
 
     pa->Tick();
@@ -259,6 +269,7 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
     pa->Tock();
     align_time = pa->calculate_elapsed_time();
     pa->accumulate_align_time(align_time);
+    pa->accumulate_total_time(align_time);
     std::cout << "align time4: " << align_time.count() * 1000 << std::endl << std::endl;
 
     pa->Tick();
@@ -269,6 +280,7 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
     pa->Tock();
     pim_time = pa->calculate_elapsed_time();
     pa->accumulate_pim_kernel_time(pim_time);
+    pa->accumulate_total_time(pim_time);
     std::cout << "pimExecuteGemm time4: " << pim_time.count() * 1000 << std::endl << std::endl;
 
     pa->Tick();
@@ -278,6 +290,7 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
     pa->Tock();
     align_time = pa->calculate_elapsed_time();
     pa->accumulate_align_time(align_time);
+    pa->accumulate_total_time(align_time);
     std::cout << "copy aligned out to origin out: " << align_time.count() * 1000 << std::endl << std::endl;
 
     pa->Tick();
@@ -287,6 +300,7 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
     pa->Tock();
     std::chrono::duration<double> copyD2H_time = pa->calculate_elapsed_time();
     pa->accumulate_copyD2H_time(copyD2H_time);
+    pa->accumulate_total_time(copyD2H_time);
     std::cout << "copyD2H time1: " << copyD2H_time.count() * 1000 << std::endl << std::endl;
 
     variables.emplace_back(params.num_nodes * params.output_dim);
@@ -305,6 +319,7 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
     pa->Tock();
     std::chrono::duration<double> deallocH_time = pa->calculate_elapsed_time();
     pa->accumulate_deallocH_time(deallocH_time);
+    pa->accumulate_total_time(deallocH_time);
     std::cout << "deallocH time1: " << deallocH_time.count() * 1000 << std::endl << std::endl;
 
     pa->Tick();
@@ -331,6 +346,7 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
     pa->Tock();
     std::chrono::duration<double> deallocD_time = pa->calculate_elapsed_time();
     pa->accumulate_deallocD_time(deallocD_time);
+    pa->accumulate_total_time(deallocD_time);
     std::cout << "deallocD time1: " << deallocD_time.count() * 1000 << std::endl << std::endl;
 
     // cross entropy loss
