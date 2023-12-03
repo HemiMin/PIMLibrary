@@ -75,16 +75,16 @@ void PerformanceAnalyser::calculate_gflops(double flt_ops)
 void PerformanceAnalyser::print_analytical_data()
 {
     std::cout << "Time analytics: \nPlatform: " << std::fixed << parser_->get_platform() << std::endl;
-    std::cout << "Time taken to initialize PIM : " << std::fixed << start_up_time_.count() * 1000000 << " us\n";
-    std::cout << "Time taken to allocH PIM : " << std::fixed << allocH_time_.count() * 1000000 << " us\n";
-    std::cout << "Time taken to allocD PIM : " << std::fixed << allocD_time_.count() * 1000000 << " us\n";
-    std::cout << "Time taken to deallocH PIM : " << std::fixed << deallocH_time_.count() * 1000000 << " us\n";
-    std::cout << "Time taken to deallocD PIM : " << std::fixed << deallocD_time_.count() * 1000000 << " us\n";
-    std::cout << "Time taken to align data : " << std::fixed << aligning_time_.count() * 1000000 << " us\n";
-    std::cout << "Time taken to copyH2D_time_ PIM : " << std::fixed << copyH2D_time_.count() * 1000000 << " us\n";
-    std::cout << "Time taken to copyD2H_time_ PIM : " << std::fixed << copyD2H_time_.count() * 1000000 << " us\n";
-    std::cout << "Time taken to pim execute operation : " << std::fixed << (pim_kernel_time_/(double)(num_iter_)).count() * 1000000 << " us\n";
-    std::cout << "Time taken to execute operation : " << std::fixed << kernel_execution_time_.count() * 1000000 << " us\n";
+    std::cout << "Time taken to initialize PIM (us) : " << std::fixed << start_up_time_.count() * 1000000 << " \n";
+    std::cout << "Time taken to allocH PIM (us) : " << std::fixed << allocH_time_.count() * 1000000 << " \n";
+    std::cout << "Time taken to allocD PIM (us) : " << std::fixed << allocD_time_.count() * 1000000 << " \n";
+    std::cout << "Time taken to deallocH PIM (us) : " << std::fixed << deallocH_time_.count() * 1000000 << " \n";
+    std::cout << "Time taken to deallocD PIM (us) : " << std::fixed << deallocD_time_.count() * 1000000 << " \n";
+    std::cout << "Time taken to align data (us) : " << std::fixed << aligning_time_.count() * 1000000 << " \n";
+    std::cout << "Time taken to copyH2D_time_ PIM (us) : " << std::fixed << copyH2D_time_.count() * 1000000 << " \n";
+    std::cout << "Time taken to copyD2H_time_ PIM (us) : " << std::fixed << copyD2H_time_.count() * 1000000 << " \n";
+    std::cout << "Time taken to pim execute operation (us) : " << std::fixed << (pim_kernel_time_/(double)(num_iter_)).count() * 1000000 << " \n";
+    std::cout << "Time taken to execute operation (us) : " << std::fixed << kernel_execution_time_.count() * 1000000 << " \n";
     std::cout << "GFlops : " << gflops_ << " gflops\n";
 }
 
