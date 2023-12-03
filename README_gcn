@@ -1,0 +1,19 @@
+to compile gcn with rocrand & hiprand, 
+
+1.run script to modify library for rand
+  ./modifyRandLib.sh
+  this script does below
+    /opt/rocm-4.0.0/include/hiprand/hiprand_hcc.h
+    - #include <rocrand.h>
+    + #include <rocrand/rocrand.h>
+
+    /opt/rocm-4.0.0/include/hiprand/hiprand_kernel.h
+    - #include <hiprand.h>
+    + #include <hiprand/hiprand.h>
+
+    /opt/rocm-4.0.0/include/hiprand/hiprand_kernel_hcc.h
+    - #include <rocrand_kernel.h>
+    + #include <rocrand/rocrand_kernel.h>
+
+2.set environment variables with 
+  $> source env.source
