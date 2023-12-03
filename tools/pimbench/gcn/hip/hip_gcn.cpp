@@ -142,13 +142,13 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
 
     pa->Tick();
     PIM_PROFILE_TICK_A(PimAllocD1);
-    pim_input = PimCreateBo(1, 1, params.num_nodes, params.input_dim, PIM_FP16, MEM_TYPE_DEVICE);
+    pim_input = PimCreateBo(1, 1, params.num_nodes, params.input_dim, PIM_FP16, MEM_TYPE_PIM);
     pim_input->bshape = {1,1,(uint32_t)params.num_nodes,6*256};
-    pim_adj_mat = PimCreateBo(1, 1, params.num_nodes, params.num_nodes, PIM_FP16, MEM_TYPE_DEVICE);
+    pim_adj_mat = PimCreateBo(1, 1, params.num_nodes, params.num_nodes, PIM_FP16, MEM_TYPE_PIM);
     pim_adj_mat->bshape = {1,1,(uint32_t)params.num_nodes,256};
-    pim_l1_weight = PimCreateBo(1, 1, params.input_dim, params.hidden_dim, PIM_FP16, MEM_TYPE_DEVICE);
+    pim_l1_weight = PimCreateBo(1, 1, params.input_dim, params.hidden_dim, PIM_FP16, MEM_TYPE_PIM);
     pim_l1_weight->bshape = {1,1,6*256,4096};
-    pim_l2_weight = PimCreateBo(1, 1, params.hidden_dim, params.output_dim, PIM_FP16, MEM_TYPE_DEVICE);
+    pim_l2_weight = PimCreateBo(1, 1, params.hidden_dim, params.output_dim, PIM_FP16, MEM_TYPE_PIM);
     pim_l2_weight->bshape = {1,1,256,4096};
     PIM_PROFILE_TOCK_A(PimAllocD1);
     pa->Tock();
@@ -159,10 +159,10 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
 
     pa->Tick();
     PIM_PROFILE_TICK_A(PimCopyH2D1);
-    PimCopyMemory(pim_input, half_input, HOST_TO_DEVICE);
-    PimCopyMemory(pim_adj_mat, half_adj_mat, HOST_TO_DEVICE);
-    PimCopyMemory(pim_l1_weight, half_l1_weight, HOST_TO_DEVICE);
-    PimCopyMemory(pim_l2_weight, half_l2_weight, HOST_TO_DEVICE);
+    PimCopyMemory(pim_input, half_input, HOST_TO_PIM);
+    PimCopyMemory(pim_adj_mat, half_adj_mat, HOST_TO_PIM);
+    PimCopyMemory(pim_l1_weight, half_l1_weight, HOST_TO_PIM);
+    PimCopyMemory(pim_l2_weight, half_l2_weight, HOST_TO_PIM);
     PIM_PROFILE_TOCK_A(PimCopyH2D1);
     pa->Tock();
     std::chrono::duration<double> copyH2D_time = pa->calculate_elapsed_time();
@@ -172,13 +172,13 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
 
     pa->Tick();
     PIM_PROFILE_TICK_A(PimAllocD2);
-    pim_l1_var1 = PimCreateBo(1, 1, (uint32_t)params.num_nodes, params.hidden_dim, PIM_FP16, MEM_TYPE_DEVICE);
+    pim_l1_var1 = PimCreateBo(1, 1, (uint32_t)params.num_nodes, params.hidden_dim, PIM_FP16, MEM_TYPE_PIM);
     pim_l1_var1->bshape = {1,1,(uint32_t)params.num_nodes,4096};
-    pim_l1_var2 = PimCreateBo(1, 1, params.num_nodes, params.hidden_dim, PIM_FP16, MEM_TYPE_DEVICE);
+    pim_l1_var2 = PimCreateBo(1, 1, params.num_nodes, params.hidden_dim, PIM_FP16, MEM_TYPE_PIM);
     pim_l1_var2->bshape = {1,1,(uint32_t)params.num_nodes,4096};
-    pim_l2_var1 = PimCreateBo(1, 1, params.num_nodes, params.output_dim, PIM_FP16, MEM_TYPE_DEVICE);
+    pim_l2_var1 = PimCreateBo(1, 1, params.num_nodes, params.output_dim, PIM_FP16, MEM_TYPE_PIM);
     pim_l2_var1->bshape = {1,1,(uint32_t)params.num_nodes,4096};
-    pim_out = PimCreateBo(1, 1, params.num_nodes, params.output_dim, PIM_FP16, MEM_TYPE_DEVICE);
+    pim_out = PimCreateBo(1, 1, params.num_nodes, params.output_dim, PIM_FP16, MEM_TYPE_PIM);
     pim_out->bshape = {1,1,(uint32_t)params.num_nodes,4096};
     pa->Tock();
     PIM_PROFILE_TOCK_A(PimAllocD2);
@@ -358,7 +358,7 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
 
     pa->Tick();
     PIM_PROFILE_TICK_A(PimCopyD2H);
-    PimCopyMemory(half_out, pim_out, DEVICE_TO_HOST);
+    PimCopyMemory(half_out, pim_out, PIM_TO_HOST);
     PIM_PROFILE_TOCK_A(PimCopyD2H);
     pa->Tock();
     std::chrono::duration<double> copyD2H_time = pa->calculate_elapsed_time();

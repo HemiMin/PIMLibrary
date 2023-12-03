@@ -479,7 +479,7 @@ int PimCopyMemory(PimBo* dst, PimBo* src, PimMemCpyType cpy_type)
 int PimCopyMemoryFromAligned(PimBo* dst, PimBo* src, PimMemCpyType cpy_type)
 {
     DLOG(INFO) << "[START] " << __FUNCTION__ << " called";
-    PIM_PROFILE_TICK(CopyMemoryRect);
+    PIM_PROFILE_TICK_A(CopyMemoryFromAligned);
     int ret = 0;
 
     if (pim_runtime == nullptr) {
@@ -487,7 +487,7 @@ int PimCopyMemoryFromAligned(PimBo* dst, PimBo* src, PimMemCpyType cpy_type)
         return -1;
     }
     ret = pim_runtime->copy_memory_from_aligned(dst, src, cpy_type);
-    PIM_PROFILE_TOCK(CopyMemoryRect);
+    PIM_PROFILE_TOCK_A(CopyMemoryFromAligned);
 
     DLOG(INFO) << "[END] " << __FUNCTION__ << " called";
     return ret;

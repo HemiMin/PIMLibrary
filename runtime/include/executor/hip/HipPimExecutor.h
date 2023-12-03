@@ -40,6 +40,7 @@ class HipPimExecutor : public IPimExecutor
     int execute_add(PimBo* output, PimBo* operand0, PimBo* operand1, void* stream, bool block);
     int execute_mul(PimBo* output, PimBo* operand0, PimBo* operand1, void* stream, bool block);
     int execute_relu(PimBo* output, PimBo* pim_data, void* stream, bool block);
+    int execute_copy(void* output, void* pim_data, size_t size, void* stream, bool block);
     int execute_copy(PimBo* output, PimBo* pim_data, void* stream, bool block);
     int execute_bn(PimBo* output, PimBo* pim_data, PimBo* beta, PimBo* gamma, PimBo* mean, PimBo* variance,
                    double epsilon, void* stream, bool block);

@@ -228,6 +228,35 @@ int HipPimEmulator::execute_relu_bn_copy(PimBo* output, PimBo* pim_data, PimMemT
     return ret;
 }
 
+int HipPimEmulator::execute_relu_bn_copy(void* output, void* pim_data, size_t size, PimMemTraceData* fmtd32, int fmtd32_size,
+                             uint64_t pim_base_addr)
+{
+    DLOG(INFO) << "called";
+    int ret = 0;
+    int num_element = 0;
+    uint16_t* sim_output = nullptr;
+    num_element = size / sizeof(uint16_t);
+    sim_output = new uint16_t[num_element];
+    uint64_t input_addr, output_addr;
+
+    input_addr = reinterpret_cast<uint64_t>(pim_data);
+    output_addr = reinterpret_cast<uint64_t>(output);
+
+    std::cout << "here3" << std::endl;
+    pim_sim_.preload_data_with_addr(input_addr - pim_base_addr, pim_data, size);
+    std::cout << "here4" << std::endl;
+    pim_sim_.execute_kernel((void*)fmtd32, (size_t)fmtd32_size);
+    std::cout << "here5" << std::endl;
+    pim_sim_.read_result(sim_output, output_addr - pim_base_addr, size);
+    std::cout << "here6" << std::endl;
+
+    hipMemcpy((half*)output, (half*)sim_output, size, hipMemcpyHostToDevice);
+
+    delete[] sim_output;
+
+    return ret;
+}
+
 int HipPimEmulator::execute_bn(PimBo* output, PimBo* pim_data, PimMemTraceData* fmtd32, int fmtd32_size,
                                uint64_t pim_base_addr, uint8_t* temp_buf)
 {
@@ -244,6 +273,11 @@ int HipPimEmulator::execute_copy(PimBo* output, PimBo* pim_data, PimMemTraceData
                                  uint64_t pim_base_addr)
 {
     return execute_relu_bn_copy(output, pim_data, fmtd32, fmtd32_size, pim_base_addr);
+}
+
+int HipPimEmulator::execute_copy(void* output, void* pim_data, size_t size, PimMemTraceData* fmtd32, int fmtd32_size, uint64_t pim_base_addr)
+{
+    return execute_relu_bn_copy(output, pim_data, size, fmtd32, fmtd32_size, pim_base_addr);
 }
 } /* namespace emulator */
 } /* namespace runtime */

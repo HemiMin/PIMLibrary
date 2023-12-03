@@ -196,7 +196,11 @@ int PimRuntime::copy_memory(void* dst, void* src, size_t size, PimMemCpyType cpy
     DLOG(INFO) << "[START] " << __FUNCTION__ << " called";
     int ret = 0;
 
-    ret = pim_manager_->copy_memory(dst, src, size, cpy_type);
+    if (cpy_type == PIM_TO_PIM) {
+        ret = pim_executor_->execute_copy(dst, src, size, NULL, true);
+    } else {
+        ret = pim_manager_->copy_memory(dst, src, size, cpy_type);
+    }
 
     DLOG(INFO) << "[END] " << __FUNCTION__ << " called";
     return ret;
@@ -501,23 +505,32 @@ int PimRuntime::pad_aligned_bo(PimBo* dst, PimBo* src)
   DLOG(INFO) << "[START] " << __FUNCTION__ << " called";
   int ret = 0;
 
-  hipMemcpyKind kind = hipMemcpyDeviceToDevice;
-
-  if (src->mem_type == MEM_TYPE_HOST) kind = hipMemcpyHostToHost;
+  PimMemCpyType kind = DEVICE_TO_DEVICE;
+  if (dst->mem_type == MEM_TYPE_PIM) kind = PIM_TO_PIM;
 
   hipMemset(dst->data, 0, dst->size);
+
   for (int n = 0; n < src->bshape_r.n; n++) {
     for (int c = 0; c < src->bshape_r.c; c++) {
       for (int h = 0; h < src->bshape_r.h; h++) {
-        if (hipMemcpy(((half_float::half*)dst->data) + 
-                       n*(src->bshape_r.c*dst->bshape.h*dst->bshape.w) +
-                       c*(dst->bshape.h*dst->bshape.w) +
-                       h * dst->bshape.w,
-              ((half_float::half*)src->data) + 
-               n*(src->bshape_r.c*src->bshape_r.h*src->bshape_r.w) +
-               c*(src->bshape_r.h*src->bshape_r.w) +
-               h * src->bshape_r.w,
-              src->bshape_r.w * sizeof(half_float::half), kind) != hipSuccess) {
+        //if (hipMemcpy(((half_float::half*)dst->data) + 
+        //               n*(src->bshape_r.c*dst->bshape.h*dst->bshape.w) +
+        //               c*(dst->bshape.h*dst->bshape.w) +
+        //               h * dst->bshape.w,
+        //      ((half_float::half*)src->data) + 
+        //       n*(src->bshape_r.c*src->bshape_r.h*src->bshape_r.w) +
+        //       c*(src->bshape_r.h*src->bshape_r.w) +
+        //       h * src->bshape_r.w,
+        //      src->bshape_r.w * sizeof(half_float::half), kind) != hipSuccess) {
+        if (this->copy_memory(((half_float::half*)dst->data) + 
+                          n*(src->bshape_r.c*dst->bshape.h*dst->bshape.w) +
+                          c*(dst->bshape.h*dst->bshape.w) +
+                          h * dst->bshape.w,
+                ((half_float::half*)src->data) + 
+                 n*(src->bshape_r.c*src->bshape_r.h*src->bshape_r.w) +
+                 c*(src->bshape_r.h*src->bshape_r.w) +
+                 h * src->bshape_r.w,
+                src->bshape_r.w * sizeof(half_float::half), kind) == -1) {
           DLOG(INFO) << "[END] " << __FUNCTION__ << " Failed to pad";
           DLOG(FATAL) << __FUNCTION__ << " Failed to pad";
           return -1;

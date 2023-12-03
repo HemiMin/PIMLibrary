@@ -40,6 +40,7 @@ class HipPimEmulator : public IPimEmulator
                        uint64_t pim_base_addr);
     int execute_relu(PimBo* output, PimBo* pim_data, PimMemTraceData* fmtd32, int fmtd32_size, uint64_t pim_base_addr);
     int execute_copy(PimBo* output, PimBo* pim_data, PimMemTraceData* fmtd32, int fmtd32_size, uint64_t pim_base_addr);
+    int execute_copy(void* output, void* pim_data, size_t size, PimMemTraceData* fmtd32, int fmtd32_size, uint64_t pim_base_addr);
     int execute_gemm_bias_act(PimBo* output, PimBo* pim_data, PimMemTraceData* fmtd32, int fmtd32_size,
                               PimOpType op_type, uint64_t pim_base_addr, uint8_t* temp_buf, PimBo* bias,
                               PimActFunc act_func);
@@ -48,6 +49,8 @@ class HipPimEmulator : public IPimEmulator
 
    private:
     int execute_relu_bn_copy(PimBo* output, PimBo* pim_data, PimMemTraceData* fmtd32, int fmtd32_size,
+                             uint64_t pim_base_addr);
+    int execute_relu_bn_copy(void* output, void* pim_data, size_t size, PimMemTraceData* fmtd32, int fmtd32_size,
                              uint64_t pim_base_addr);
 
    private:

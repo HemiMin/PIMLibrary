@@ -346,6 +346,48 @@ int HipPimExecutor::execute_relu(PimBo* output, PimBo* pim_data, void* stream, b
     return ret;
 }
 
+int HipPimExecutor::execute_copy(void* output, void* pim_data, size_t size, void* stream, bool block)
+{
+    DLOG(INFO) << "called";
+    int ret = 0;
+
+    uint8_t* crf_bin = pim_crf_generator_->find_crf(OP_COPY, size);
+    int crf_size = 32;
+    if (crf_bin == nullptr) {
+        crf_bin = (uint8_t*)pim_crf_generator_->make_crf_bin(OP_COPY, size);
+    }
+
+    unsigned blocks = pbi_->num_pim_chan;
+    unsigned threads_per_block = 32;
+
+    int device_id;
+    hipGetDevice(&device_id);
+    hipLaunchKernelGGL(
+        copy_pim, dim3(blocks), dim3(threads_per_block), 0, (hipStream_t)stream, (uint8_t*)pim_data,
+        (uint8_t*)g_pim_base_addr[device_id], (uint8_t*)output, (int)size,
+#ifdef EMULATOR
+        (PimMemTraceData*)d_fmtd16_, (int*)d_fmtd16_size_, fmtd_size_per_ch_, (PimMemTracer*)d_emulator_trace_,
+#endif
+        (uint8_t*)crf_bin, crf_size);
+#ifdef EMULATOR
+    hipStreamSynchronize((hipStream_t)stream);
+    hipMemcpy((void*)h_fmtd16_size_, (void*)d_fmtd16_size_, sizeof(int), hipMemcpyDeviceToHost);
+    hipMemcpy((void*)h_fmtd16_, (void*)d_fmtd16_, sizeof(PimMemTraceData) * max_fmtd_size_, hipMemcpyDeviceToHost);
+
+    for (size_t i = 1; i < blocks; i++) {
+        memcpy(&h_fmtd16_[i * h_fmtd16_size_[0]], &h_fmtd16_[i * fmtd_size_per_ch_],
+               h_fmtd16_size_[0] * sizeof(PimMemTraceData));
+    }
+    h_fmtd16_size_[0] *= blocks;
+    pim_emulator_->convert_mem_trace_from_16B_to_32B(h_fmtd32_, h_fmtd32_size_, h_fmtd16_, h_fmtd16_size_[0], OP_COPY);
+    std::cout << "2here?" << std::endl;
+    pim_emulator_->execute_copy(output, pim_data, size, h_fmtd32_, h_fmtd32_size_[0], g_pim_base_addr[device_id]);
+    std::cout << "here?" << std::endl;
+#else
+    if (block) hipStreamSynchronize((hipStream_t)stream);
+#endif
+    return ret;
+}
 int HipPimExecutor::execute_copy(PimBo* output, PimBo* pim_data, void* stream, bool block)
 {
     DLOG(INFO) << "called";
