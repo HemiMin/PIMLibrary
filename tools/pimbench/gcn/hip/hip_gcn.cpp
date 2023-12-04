@@ -258,7 +258,7 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
     std::chrono::duration<double> pim_time = pa->calculate_elapsed_time();
     pa->accumulate_pim_kernel_time(pim_time);
     pa->accumulate_total_time(pim_time);
-    std::cout << "pimExecuteGemm time1: " << pim_time.count() * 1000 << std::endl << std::endl;
+    std::cout << "executeGemm time1: " << pim_time.count() * 1000 << std::endl << std::endl;
 
     pa->Tick();
     PIM_PROFILE_TICK_A(PimAlignL1V1_2);
@@ -280,7 +280,7 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
     pim_time = pa->calculate_elapsed_time();
     pa->accumulate_pim_kernel_time(pim_time);
     pa->accumulate_total_time(pim_time);
-    std::cout << "pimExecuteGemm time2: " << pim_time.count() * 1000 << std::endl << std::endl;
+    std::cout << "executeGemm time2: " << pim_time.count() * 1000 << std::endl << std::endl;
 
     pa->Tick();
     PIM_PROFILE_TICK_A(PimAlignL1V2_2);
@@ -322,7 +322,7 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
     pim_time = pa->calculate_elapsed_time();
     pa->accumulate_pim_kernel_time(pim_time);
     pa->accumulate_total_time(pim_time);
-    std::cout << "pimExecuteGemm time3: " << pim_time.count() * 1000 << std::endl << std::endl;
+    std::cout << "executeGemm time3: " << pim_time.count() * 1000 << std::endl << std::endl;
 
     pa->Tick();
     PIM_PROFILE_TICK_A(PimAlignL2V1_2);
@@ -344,7 +344,7 @@ CUDAGCN::CUDAGCN(GCNParams params, GCNData *input_data, PerformanceAnalyser* pa)
     pim_time = pa->calculate_elapsed_time();
     pa->accumulate_pim_kernel_time(pim_time);
     pa->accumulate_total_time(pim_time);
-    std::cout << "pimExecuteGemm time4: " << pim_time.count() * 1000 << std::endl << std::endl;
+    std::cout << "executeGemm time4: " << pim_time.count() * 1000 << std::endl << std::endl;
 
     pa->Tick();
     PIM_PROFILE_TICK_A(PimCopyAlignedData);
