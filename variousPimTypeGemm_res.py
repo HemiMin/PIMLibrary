@@ -1,5 +1,5 @@
-combined_res = open('combined_res.txt', 'w')
-combined_res.write('==== GEMM Test ====\n')
+combined_res = open('combined_res.txt', 'a')
+combined_res.write('\n\n==== PimType GEMM Test ====\n')
 combined_res.write('in_h\tin_w\tot_h\tot_w\treorderW\tprepare\trunKernel\tapiCall\tallocH\tallocD\tcpyH2D\tcpyD2H\tdeallocH\tdeallocD\ttotal\n\n')
 
 def extract_time(line):
@@ -12,7 +12,7 @@ o_w = [4096]
 for ih in i_h:
     for iw in i_w:
         for ow in o_w:
-            res_file = 'GemmRes/gemm_' + str(ih) + '_' + str(iw) + '_' + str(ih) + '_' + str(ow)
+            res_file = 'PimTypeGemmRes/gemm_' + str(ih) + '_' + str(iw) + '_' + str(ih) + '_' + str(ow)
             res = open(res_file, 'r')
 
             start_record = False
