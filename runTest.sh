@@ -17,7 +17,7 @@ mkdir GemmRes
 for ih in "${i_h[@]}"; do
 for iw in "${i_w[@]}"; do
 for ow in "${o_w[@]}"; do
-  sudo ./build/tools/pimbench/pimbench -o gemm -n 1 -c 1 --i_h ${ih} --i_w ${iw} --o_h ${ih} --o_w ${ow} --order i_x_w -i 1 &> GemmRes/gemm_${ih}_${iw}_${ih}_${ow}
+  sudo ./build/tools/pimbench/pimbench -o gemm -n 1 -c 1 --i_h ${ih} --i_w ${iw} --o_h ${ih} --o_w ${ow} --order i_x_w -i 5 &> GemmRes/gemm_${ih}_${iw}_${ih}_${ow}
 done
 done
 done
@@ -33,7 +33,7 @@ mkdir PimTypeGemmRes
 for ih in "${i_h[@]}"; do
 for iw in "${i_w[@]}"; do
 for ow in "${o_w[@]}"; do
-  sudo ./build/tools/pimbench/pimbench -o gemm -n 1 -c 1 --i_h ${ih} --i_w ${iw} --o_h ${ih} --o_w ${ow} --order i_x_w -i 1 &> PimTypeGemmRes/gemm_${ih}_${iw}_${ih}_${ow}
+  sudo ./build/tools/pimbench/pimbench -o gemm -n 1 -c 1 --i_h ${ih} --i_w ${iw} --o_h ${ih} --o_w ${ow} --order i_x_w -i 5 &> PimTypeGemmRes/gemm_${ih}_${iw}_${ih}_${ow}
 done
 done
 done
